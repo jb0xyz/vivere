@@ -31,6 +31,21 @@ export type {
 } from './authoring/types.js'
 export { serializeCommand, toDiscordName } from './manifest/serialize.js'
 export type { SerializedCommand, SerializedOption } from './manifest/serialize.js'
+export {
+  buildManifest,
+  manifestToJson,
+} from './manifest/manifest.js'
+export type {
+  Manifest,
+  SerializedButton,
+  SerializedButtonParam,
+  SerializedEvent,
+} from './manifest/manifest.js'
+export {
+  discoverButtons,
+  discoverCommands,
+  discoverEvents,
+} from './discovery/discover.js'
 export { createRouter } from './runtime/router.js'
 export type { InteractionRouter } from './runtime/router.js'
 export type {
