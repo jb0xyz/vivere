@@ -12,6 +12,7 @@ describe('param', () => {
   test('guards string max length', () => {
     const node = param.string(3)
 
+    expect(node.maxLength).toBe(3)
     expect(node.encode('abc')).toBe('abc')
     expect(() => node.decode('abcd')).toThrow('exceeds max length')
   })
@@ -29,6 +30,7 @@ describe('param', () => {
   test('round-trips enum values', () => {
     const node = param.enum(['approve', 'deny'] as const)
 
+    expect(node.values).toEqual(['approve', 'deny'])
     expect(node.encode('approve')).toBe('approve')
     expect(node.decode('deny')).toBe('deny')
     expect(() => node.decode('skip')).toThrow('Invalid enum param')

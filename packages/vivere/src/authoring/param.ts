@@ -2,6 +2,8 @@ export type ParamKind = 'snowflake' | 'string' | 'boolean' | 'enum'
 
 export interface ParamNode<TValue> {
   readonly kind: ParamKind
+  readonly maxLength?: number
+  readonly values?: readonly string[]
   encode(value: TValue): string
   decode(raw: string): TValue
 }
@@ -33,6 +35,7 @@ export const param = {
   string(maxLength: number): ParamNode<string> {
     return {
       kind: 'string',
+      maxLength,
       encode(value) {
         if (value.length > maxLength) throw new Error(`String param exceeds max length ${maxLength}`)
         return value
@@ -59,6 +62,7 @@ export const param = {
   enum<const TValue extends string>(values: readonly TValue[]): ParamNode<TValue> {
     return {
       kind: 'enum',
+      values,
       encode(value) {
         if (!values.includes(value)) throw new Error(`Invalid enum param: ${value}`)
         return value

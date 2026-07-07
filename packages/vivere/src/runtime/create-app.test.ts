@@ -20,9 +20,9 @@ describe('resolveDefinitions', () => {
       buttons: [button],
     })
 
-    expect(definitions.commands.map((item) => item.name)).toEqual(['ping'])
-    expect(definitions.events.map((item) => item.name)).toEqual(['ready'])
-    expect(definitions.buttons.map((item) => item.id)).toEqual(['confirm'])
+    expect(definitions.commands.map((item) => item.descriptor.name)).toEqual(['ping'])
+    expect(definitions.events.map((item) => item.descriptor.name)).toEqual(['ready'])
+    expect(definitions.buttons.map((item) => item.descriptor.id)).toEqual(['confirm'])
   })
 
   test('discovers definitions from configured roots', async () => {
@@ -35,9 +35,9 @@ describe('resolveDefinitions', () => {
       },
     })
 
-    expect(definitions.commands.map((item) => item.name)).toEqual(['ask', 'ping'])
-    expect(definitions.events.map((item) => item.name)).toEqual(['ready', 'ready'])
-    expect(definitions.buttons.map((item) => item.id)).toEqual(['confirm', 'cancel'])
+    expect(definitions.commands.map((item) => item.descriptor.name)).toEqual(['ask', 'ping'])
+    expect(definitions.events.map((item) => item.descriptor.name)).toEqual(['ready', 'ready'])
+    expect(definitions.buttons.map((item) => item.descriptor.id)).toEqual(['confirm', 'cancel'])
   })
 
   test('combines explicit and discovered definitions', async () => {
@@ -54,8 +54,8 @@ describe('resolveDefinitions', () => {
       },
     })
 
-    expect(definitions.commands.map((item) => item.name)).toEqual(['help', 'ask', 'ping'])
-    expect(definitions.buttons.map((item) => item.id)).toEqual(['help', 'confirm', 'cancel'])
+    expect(definitions.commands.map((item) => item.descriptor.name)).toEqual(['help', 'ask', 'ping'])
+    expect(definitions.buttons.map((item) => item.descriptor.id)).toEqual(['help', 'confirm', 'cancel'])
   })
 
   test('throws on combined command or button duplicates', async () => {
@@ -91,7 +91,7 @@ describe('resolveDefinitions', () => {
       },
     )
 
-    expect(definitions.commands.map((item) => item.name)).toEqual(['ask', 'ping'])
+    expect(definitions.commands.map((item) => item.descriptor.name)).toEqual(['ask', 'ping'])
     expect(importedPathList.every((item) => item.startsWith(resolve(fixtureDir)))).toBe(true)
   })
 })

@@ -71,11 +71,13 @@ test('writes manifest from configured TypeScript files', async () => {
       {
         kind: 'command',
         name: 'ping',
-        options: [{ name: 'target-user', kind: 'user', required: true }],
+        description: 'Pong',
+        route: ['ping'],
+        options: [{ property: 'targetUser', name: 'target-user', kind: 'user', description: 'target', required: true }],
       },
     ],
-    events: [{ name: 'ready', once: true }],
-    buttons: [{ id: 'confirm', params: [{ name: 'userId', kind: 'snowflake' }] }],
+    events: [{ kind: 'event', name: 'ready', once: true }],
+    buttons: [{ kind: 'button', id: 'confirm', params: [{ name: 'userId', kind: 'snowflake' }] }],
   })
 })
 

@@ -4,12 +4,15 @@ import { createVivere } from './create-vivere.js'
 const { defineCommand, opt } = createVivere<{ n: number }>()
 
 describe('defineCommand', () => {
-  test('returns a command IR with defaults', () => {
+  test('returns a command definition with a descriptor', () => {
     const cmd = defineCommand({ name: 'ping', description: 'Pong', async execute() {} })
-    expect(cmd.kind).toBe('command')
-    expect(cmd.name).toBe('ping')
-    expect(cmd.description).toBe('Pong')
-    expect(cmd.options).toEqual({})
+    expect(cmd.descriptor).toEqual({
+      kind: 'command',
+      name: 'ping',
+      description: 'Pong',
+      route: ['ping'],
+      options: [],
+    })
   })
 
   test('captures declared options and callable execute', async () => {
@@ -20,7 +23,15 @@ describe('defineCommand', () => {
       options: { note: opt.string('note') },
       execute: spy,
     })
-    expect(Object.keys(cmd.options)).toEqual(['note'])
+    expect(cmd.descriptor.options).toEqual([
+      {
+        property: 'note',
+        name: 'note',
+        kind: 'string',
+        description: 'note',
+        required: true,
+      },
+    ])
     await cmd.execute({
       options: {},
       services: { n: 1 },

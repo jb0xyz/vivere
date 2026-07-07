@@ -16,7 +16,7 @@ test('maps options to Discord types and lists required ones first', () => {
     async execute() {},
   })
 
-  const json = toCommandJSON(cmd)
+  const json = toCommandJSON(cmd.descriptor)
 
   expect(json.name).toBe('assign-role')
   expect(json.type).toBe(ApplicationCommandType.ChatInput)

@@ -1,10 +1,10 @@
 import { ActionRowBuilder, ButtonBuilder, ButtonStyle } from 'discord.js'
-import type { ButtonIR, CommandIR } from '../authoring/create-vivere.js'
-import type { InferParams, ParamsRecord } from '../authoring/param.js'
+import type { ButtonDefinition, CommandDefinition } from '../authoring/create-vivere.js'
+import type { ParamDescriptor } from '../authoring/ir.js'
 import type { CommandContext } from '../authoring/types.js'
+import type { ButtonDefinitionForParams } from '../authoring/types.js'
 import type { ButtonStyleName, ComponentsBuilder } from '../authoring/types.js'
 import { decodeCustomId, encodeCustomId } from '../components/custom-id.js'
-import { toDiscordName } from '../manifest/serialize.js'
 import type { ButtonInteractionAdapter, ChatInputInteractionAdapter } from './interaction-adapter.js'
 
 export interface DispatchDeps<TServices> {
@@ -12,8 +12,8 @@ export interface DispatchDeps<TServices> {
 }
 
 export interface CreateRouterOptions<TServices> {
-  commands: CommandIR<TServices>[]
-  buttons: ButtonIR<TServices>[]
+  commands: CommandDefinition<TServices>[]
+  buttons: ButtonDefinition<TServices>[]
   secret: string
 }
 
@@ -29,13 +29,33 @@ const BUTTON_STYLE = {
   danger: ButtonStyle.Danger,
 } satisfies Record<ButtonStyleName, ButtonStyle>
 
-function encodeButtonParams<TServices, TParams extends ParamsRecord>(
-  button: ButtonIR<TServices, TParams>,
-  params: InferParams<TParams>,
+function encodeButtonParam(param: ParamDescriptor, value: unknown): string {
+  switch (param.kind) {
+    case 'snowflake':
+      if (typeof value !== 'string' || !/^\d{17,20}$/.test(value)) throw new Error(`Invalid snowflake param: ${value}`)
+      return value
+    case 'string':
+      if (typeof value !== 'string') throw new Error(`Invalid string param: ${value}`)
+      if (param.maxLength !== undefined && value.length > param.maxLength) {
+        throw new Error(`String param exceeds max length ${param.maxLength}`)
+      }
+      return value
+    case 'boolean':
+      if (typeof value !== 'boolean') throw new Error(`Invalid boolean param: ${value}`)
+      return value ? 'true' : 'false'
+    case 'enum':
+      if (typeof value !== 'string' || !param.values?.includes(value)) throw new Error(`Invalid enum param: ${value}`)
+      return value
+  }
+}
+
+function encodeButtonParams(
+  button: ButtonDefinitionForParams<Record<string, unknown>>,
+  params: Record<string, unknown>,
 ): Record<string, string> {
   const encodedParams: Record<string, string> = {}
-  for (const [key, node] of Object.entries(button.params)) {
-    encodedParams[key] = node.encode(params[key as keyof InferParams<TParams>])
+  for (const param of button.descriptor.params) {
+    encodedParams[param.name] = encodeButtonParam(param, params[param.name])
   }
   return encodedParams
 }
@@ -43,7 +63,7 @@ function encodeButtonParams<TServices, TParams extends ParamsRecord>(
 function createComponentsBuilder(secret: string): ComponentsBuilder {
   return {
     button(button, options) {
-      const customId = encodeCustomId(button.id, encodeButtonParams(button, options.params), secret)
+      const customId = encodeCustomId(button.descriptor.id, encodeButtonParams(button, options.params), secret)
       const builder = new ButtonBuilder()
         .setCustomId(customId)
         .setLabel(options.label)
@@ -55,8 +75,8 @@ function createComponentsBuilder(secret: string): ComponentsBuilder {
 }
 
 export function createRouter<TServices>(options: CreateRouterOptions<TServices>): InteractionRouter<TServices> {
-  const commandRegistry = new Map(options.commands.map((c) => [c.name, c] as const))
-  const buttonRegistry = new Map(options.buttons.map((b) => [b.id, b] as const))
+  const commandRegistry = new Map(options.commands.map((command) => [command.descriptor.name, command] as const))
+  const buttonRegistry = new Map(options.buttons.map((button) => [button.descriptor.id, button] as const))
   const components = createComponentsBuilder(options.secret)
 
   return {
@@ -65,8 +85,8 @@ export function createRouter<TServices>(options: CreateRouterOptions<TServices>)
       if (!command) return
 
       const options: Record<string, unknown> = {}
-      for (const [key, node] of Object.entries(command.options)) {
-        options[key] = adapter.getOption(toDiscordName(key), node.kind, node.presence === 'required')
+      for (const option of command.descriptor.options) {
+        options[option.property] = adapter.getOption(option.name, option.kind, option.required)
       }
 
       const ctx: CommandContext<Record<string, unknown>, TServices> = {
@@ -95,10 +115,10 @@ export function createRouter<TServices>(options: CreateRouterOptions<TServices>)
 
       const params: Record<string, unknown> = {}
       try {
-        for (const [key, node] of Object.entries(button.params)) {
+        for (const [key, codec] of Object.entries(button.codecs)) {
           const raw = decoded.params[key]
           if (raw === undefined) throw new Error(`Missing button param: ${key}`)
-          params[key] = node.decode(raw)
+          params[key] = codec.decode(raw)
         }
       } catch (error) {
         console.warn(error)

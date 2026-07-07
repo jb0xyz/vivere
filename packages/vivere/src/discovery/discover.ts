@@ -1,9 +1,9 @@
 import { readdir } from 'node:fs/promises'
 import { basename, extname, join, resolve } from 'node:path'
 import { pathToFileURL } from 'node:url'
-import type { ButtonIR, CommandIR, EventIR } from '../authoring/create-vivere.js'
+import type { ButtonDefinition, CommandDefinition, EventDefinition } from '../authoring/create-vivere.js'
 
-type DiscoverableIR = ButtonIR | CommandIR | EventIR
+type DiscoverableDefinition = ButtonDefinition | CommandDefinition | EventDefinition
 export interface DiscoverOptions {
   import?: (absPath: string) => Promise<unknown>
 }
@@ -34,13 +34,13 @@ async function nativeImport(absPath: string): Promise<unknown> {
   return import(pathToFileURL(absPath).href)
 }
 
-async function importDefault(path: string, importer: (absPath: string) => Promise<unknown>): Promise<DiscoverableIR> {
+async function importDefault(path: string, importer: (absPath: string) => Promise<unknown>): Promise<DiscoverableDefinition> {
   const mod = await importer(path)
   const value = mod && typeof mod === 'object' && 'default' in mod ? mod.default : mod
-  if (!value || typeof value !== 'object' || !('kind' in value)) {
+  if (!value || typeof value !== 'object' || !('descriptor' in value)) {
     throw new Error(`Expected default export from ${path}`)
   }
-  return value as DiscoverableIR
+  return value as DiscoverableDefinition
 }
 
 function getFileBaseName(path: string): string {
@@ -58,23 +58,23 @@ function assertUnique(items: readonly string[], label: string): void {
 export async function discoverCommands<TServices = unknown>(
   dir: string,
   options: DiscoverOptions = {},
-): Promise<CommandIR<TServices>[]> {
+): Promise<CommandDefinition<TServices>[]> {
   const importer = options.import ?? nativeImport
   const fileList = await collectFileList(resolve(dir))
   const commandList = await Promise.all(
     fileList.map(async (file) => {
       const value = await importDefault(file, importer)
-      if (value.kind !== 'command') throw new Error(`Expected command default export from ${file}`)
+      if (value.descriptor.kind !== 'command') throw new Error(`Expected command default export from ${file}`)
       const fileName = getFileBaseName(file)
-      if (value.name !== fileName) {
-        throw new Error(`Command name "${value.name}" must match file name "${fileName}"`)
+      if (value.descriptor.name !== fileName) {
+        throw new Error(`Command name "${value.descriptor.name}" must match file name "${fileName}"`)
       }
-      return value as CommandIR<TServices>
+      return value as CommandDefinition<TServices>
     }),
   )
 
   assertUnique(
-    commandList.map((command) => command.name),
+    commandList.map((command) => command.descriptor.name),
     'command name',
   )
   return commandList
@@ -83,14 +83,14 @@ export async function discoverCommands<TServices = unknown>(
 export async function discoverEvents<TServices = unknown>(
   dir: string,
   options: DiscoverOptions = {},
-): Promise<EventIR<TServices>[]> {
+): Promise<EventDefinition<TServices>[]> {
   const importer = options.import ?? nativeImport
   const fileList = await collectFileList(resolve(dir))
   return Promise.all(
     fileList.map(async (file) => {
       const value = await importDefault(file, importer)
-      if (value.kind !== 'event') throw new Error(`Expected event default export from ${file}`)
-      return value as EventIR<TServices>
+      if (value.descriptor.kind !== 'event') throw new Error(`Expected event default export from ${file}`)
+      return value as EventDefinition<TServices>
     }),
   )
 }
@@ -98,19 +98,19 @@ export async function discoverEvents<TServices = unknown>(
 export async function discoverButtons<TServices = unknown>(
   dir: string,
   options: DiscoverOptions = {},
-): Promise<ButtonIR<TServices>[]> {
+): Promise<ButtonDefinition<TServices>[]> {
   const importer = options.import ?? nativeImport
   const fileList = await collectFileList(resolve(dir))
   const buttonList = await Promise.all(
     fileList.map(async (file) => {
       const value = await importDefault(file, importer)
-      if (value.kind !== 'button') throw new Error(`Expected button default export from ${file}`)
-      return value as ButtonIR<TServices>
+      if (value.descriptor.kind !== 'button') throw new Error(`Expected button default export from ${file}`)
+      return value as ButtonDefinition<TServices>
     }),
   )
 
   assertUnique(
-    buttonList.map((button) => button.id),
+    buttonList.map((button) => button.descriptor.id),
     'button id',
   )
   return buttonList

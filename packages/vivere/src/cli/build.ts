@@ -45,7 +45,13 @@ export async function runBuild(input: RunBuildInput): Promise<RunBuildResult> {
   const buttons = config.discovery.components
     ? await discoverButtons(resolve(configDir, config.discovery.components), { import: importer })
     : []
-  const manifestJson = manifestToJson(buildManifest({ commands, events, buttons }))
+  const manifestJson = manifestToJson(
+    buildManifest({
+      commands: commands.map((command) => command.descriptor),
+      events: events.map((event) => event.descriptor),
+      buttons: buttons.map((button) => button.descriptor),
+    }),
+  )
   const manifestPath = join(cwd, '.vivere/manifest.json')
   const existingManifest = await readExistingManifest(manifestPath)
   const changed = existingManifest !== manifestJson

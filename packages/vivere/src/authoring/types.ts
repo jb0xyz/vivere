@@ -1,17 +1,21 @@
 import type { ActionRowBuilder, ButtonBuilder, Client } from 'discord.js'
-import type { ButtonIR } from './create-vivere.js'
-import type { InferParams, ParamsRecord } from './param.js'
+import type { ButtonDescriptor } from './ir.js'
 
 export type ButtonStyleName = 'primary' | 'secondary' | 'success' | 'danger'
 export type ButtonActionRow = ActionRowBuilder<ButtonBuilder>
 export type ReplyInput = string | { content: string; ephemeral?: boolean; components?: ButtonActionRow[] }
 export type DeferInput = { ephemeral?: boolean }
 
+export interface ButtonDefinitionForParams<TParams extends Record<string, unknown>> {
+  readonly descriptor: ButtonDescriptor
+  readonly __params?: TParams
+}
+
 export interface ComponentsBuilder {
-  button<TServices, TParams extends ParamsRecord>(
-    button: ButtonIR<TServices, TParams>,
+  button<TParams extends Record<string, unknown>>(
+    button: ButtonDefinitionForParams<TParams>,
     options: {
-      params: InferParams<TParams>
+      params: NoInfer<TParams>
       label: string
       style?: ButtonStyleName
     },

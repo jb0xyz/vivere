@@ -1,9 +1,9 @@
 import type { Client } from 'discord.js'
-import type { EventIR } from '../authoring/create-vivere.js'
+import type { EventDefinition } from '../authoring/create-vivere.js'
 
 export function registerEvents<TServices>(
   client: Client,
-  events: EventIR<TServices>[],
+  events: EventDefinition<TServices>[],
   createServices: () => Promise<TServices>,
 ): void {
   for (const event of events) {
@@ -16,7 +16,7 @@ export function registerEvents<TServices>(
         .catch((error: unknown) => console.error(error))
     }
 
-    const register = event.once ? client.once.bind(client) : client.on.bind(client)
-    register(event.name as never, listener as never)
+    const register = event.descriptor.once ? client.once.bind(client) : client.on.bind(client)
+    register(event.descriptor.name as never, listener as never)
   }
 }

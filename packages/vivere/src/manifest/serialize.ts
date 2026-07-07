@@ -1,29 +1,11 @@
-import type { CommandIR } from '../authoring/create-vivere.js'
+import type { CommandDescriptor } from '../authoring/ir.js'
 
-export interface SerializedOption {
-  name: string
-  kind: string
-  required: boolean
-}
+export type SerializedOption = CommandDescriptor['options'][number]
+export type SerializedCommand = CommandDescriptor
 
-export interface SerializedCommand {
-  kind: 'command'
-  name: string
-  options: SerializedOption[]
-}
-
-/** camelCase property key → kebab-case Discord option name. */
-export function toDiscordName(key: string): string {
-  return key.replace(/([a-z0-9])([A-Z])/g, '$1-$2').toLowerCase()
-}
-
-export function serializeCommand<TServices>(ir: CommandIR<TServices>): SerializedCommand {
-  const options = Object.entries(ir.options)
-    .map(([key, node]) => ({
-      name: toDiscordName(key),
-      kind: node.kind,
-      required: node.presence === 'required',
-    }))
+export function serializeCommand(descriptor: CommandDescriptor): SerializedCommand {
+  const options = descriptor.options
+    .map((option) => ({ ...option }))
     .sort((a, b) => a.name.localeCompare(b.name))
-  return { kind: 'command', name: ir.name, options }
+  return { ...descriptor, route: [...descriptor.route], options }
 }

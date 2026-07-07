@@ -4,22 +4,32 @@
     {
       "kind": "command",
       "name": "ask",
+      "description": "확인 버튼을 보냅니다",
+      "route": [
+        "ask"
+      ],
       "options": []
     },
     {
       "kind": "command",
       "name": "ping",
+      "description": "Pong을 반환",
+      "route": [
+        "ping"
+      ],
       "options": []
     }
   ],
   "events": [
     {
+      "kind": "event",
       "name": "ready",
       "once": true
     }
   ],
   "buttons": [
     {
+      "kind": "button",
       "id": "confirm",
       "params": [
         {

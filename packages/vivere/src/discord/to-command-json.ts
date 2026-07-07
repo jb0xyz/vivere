@@ -1,7 +1,6 @@
 import { ApplicationCommandOptionType, ApplicationCommandType } from 'discord.js'
-import type { CommandIR } from '../authoring/create-vivere.js'
+import type { CommandDescriptor } from '../authoring/ir.js'
 import type { OptionKind } from '../authoring/opt.js'
-import { toDiscordName } from '../manifest/serialize.js'
 
 const OPTION_TYPE = {
   string: ApplicationCommandOptionType.String,
@@ -13,20 +12,19 @@ const OPTION_TYPE = {
   attachment: ApplicationCommandOptionType.Attachment,
 } satisfies Record<OptionKind, ApplicationCommandOptionType>
 
-export function toCommandJSON<TServices>(ir: CommandIR<TServices>) {
-  const options = Object.entries(ir.options)
-    .map(([key, node]) => ({
-      name: toDiscordName(key),
-      description: node.description,
-      type: OPTION_TYPE[node.kind],
-      required: node.presence === 'required',
+export function toCommandJSON(descriptor: CommandDescriptor) {
+  const options = descriptor.options
+    .map((option) => ({
+      name: option.name,
+      description: option.description,
+      type: OPTION_TYPE[option.kind],
+      required: option.required,
     }))
-    // Discord requires every required option to be listed before optional ones.
     .sort((a, b) => Number(b.required) - Number(a.required))
 
   return {
-    name: ir.name,
-    description: ir.description,
+    name: descriptor.name,
+    description: descriptor.description,
     type: ApplicationCommandType.ChatInput,
     options,
   }

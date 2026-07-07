@@ -8,13 +8,13 @@ describe('discovery', () => {
   test('discovers command defaults recursively and skips reserved files', async () => {
     const commands = await discoverCommands(`${fixtureDir}/valid/commands`)
 
-    expect(commands.map((command) => command.name)).toEqual(['ask', 'ping'])
+    expect(commands.map((command) => command.descriptor.name)).toEqual(['ask', 'ping'])
   })
 
   test('discovers event defaults and allows duplicate event names', async () => {
     const events = await discoverEvents(`${fixtureDir}/valid/events`)
 
-    expect(events.map((event) => ({ name: event.name, once: event.once }))).toEqual([
+    expect(events.map((event) => ({ name: event.descriptor.name, once: event.descriptor.once }))).toEqual([
       { name: 'ready', once: false },
       { name: 'ready', once: true },
     ])
@@ -23,7 +23,7 @@ describe('discovery', () => {
   test('discovers button defaults recursively', async () => {
     const buttons = await discoverButtons(`${fixtureDir}/valid/buttons`)
 
-    expect(buttons.map((button) => button.id)).toEqual(['confirm', 'cancel'])
+    expect(buttons.map((button) => button.descriptor.id)).toEqual(['confirm', 'cancel'])
   })
 
   test('throws when command name does not match file basename', async () => {

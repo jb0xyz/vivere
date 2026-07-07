@@ -2,7 +2,7 @@ import { createHmac } from 'node:crypto'
 import { resolve } from 'node:path'
 import { Client } from 'discord.js'
 import type { ApplicationCommandDataResolvable, GatewayIntentBits } from 'discord.js'
-import type { ButtonIR, CommandIR, EventIR } from '../authoring/create-vivere.js'
+import type { ButtonDefinition, CommandDefinition, EventDefinition } from '../authoring/create-vivere.js'
 import type { DiscoverOptions } from '../discovery/discover.js'
 import { discoverButtons, discoverCommands, discoverEvents } from '../discovery/discover.js'
 import { handleInteraction } from '../discord/client.js'
@@ -25,24 +25,24 @@ export interface AppDiscoveryConfig {
 export interface CreateAppOptions<TServices> {
   config: AppConfig
   createServices: () => Promise<TServices>
-  commands?: CommandIR<TServices>[]
-  buttons?: ButtonIR<TServices>[]
-  events?: EventIR<TServices>[]
+  commands?: CommandDefinition<TServices>[]
+  buttons?: ButtonDefinition<TServices>[]
+  events?: EventDefinition<TServices>[]
   discover?: AppDiscoveryConfig
 }
 
 export interface ResolveDefinitionsInput<TServices> {
   cwd: string
-  commands?: CommandIR<TServices>[]
-  buttons?: ButtonIR<TServices>[]
-  events?: EventIR<TServices>[]
+  commands?: CommandDefinition<TServices>[]
+  buttons?: ButtonDefinition<TServices>[]
+  events?: EventDefinition<TServices>[]
   discover?: AppDiscoveryConfig
 }
 
 export interface ResolvedDefinitions<TServices> {
-  commands: CommandIR<TServices>[]
-  events: EventIR<TServices>[]
-  buttons: ButtonIR<TServices>[]
+  commands: CommandDefinition<TServices>[]
+  events: EventDefinition<TServices>[]
+  buttons: ButtonDefinition<TServices>[]
 }
 
 export interface App {
@@ -76,11 +76,11 @@ export async function resolveDefinitions<TServices>(
   const buttons = [...(input.buttons ?? []), ...discoveredButtons]
 
   assertUnique(
-    commands.map((command) => command.name),
+    commands.map((command) => command.descriptor.name),
     'command name',
   )
   assertUnique(
-    buttons.map((button) => button.id),
+    buttons.map((button) => button.descriptor.id),
     'button id',
   )
 
@@ -124,7 +124,10 @@ export function createApp<TServices>(options: CreateAppOptions<TServices>): App 
           }
 
           ready.application.commands
-            .set(definitions.commands.map(toCommandJSON) as ApplicationCommandDataResolvable[], config.devGuildId)
+            .set(
+              definitions.commands.map((command) => toCommandJSON(command.descriptor)) as ApplicationCommandDataResolvable[],
+              config.devGuildId,
+            )
             .then(() => resolve())
             .catch((error: unknown) => reject(error))
         })

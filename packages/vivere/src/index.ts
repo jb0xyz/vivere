@@ -1,13 +1,22 @@
 export const VERSION = '0.0.0'
 export { createVivere } from './authoring/create-vivere.js'
 export type {
-  ButtonIR,
+  ButtonDefinition,
   ButtonInput,
-  CommandIR,
+  CommandDefinition,
   CommandInput,
-  EventIR,
+  EventDefinition,
   EventInput,
+  ParamCodec,
 } from './authoring/create-vivere.js'
+export { toDiscordName } from './authoring/naming.js'
+export type {
+  ButtonDescriptor,
+  CommandDescriptor,
+  EventDescriptor,
+  OptionDescriptor,
+  ParamDescriptor,
+} from './authoring/ir.js'
 export { opt } from './authoring/opt.js'
 export type {
   OptionNode,
@@ -23,6 +32,7 @@ export { defineConfig } from './config/define-config.js'
 export type { VivereConfig } from './config/define-config.js'
 export type {
   ButtonActionRow,
+  ButtonDefinitionForParams,
   ButtonContext,
   ButtonStyleName,
   CommandContext,
@@ -31,7 +41,7 @@ export type {
   ReplyInput,
   DeferInput,
 } from './authoring/types.js'
-export { serializeCommand, toDiscordName } from './manifest/serialize.js'
+export { serializeCommand } from './manifest/serialize.js'
 export type { SerializedCommand, SerializedOption } from './manifest/serialize.js'
 export {
   buildManifest,

@@ -26,9 +26,9 @@ test('builds deterministic manifests without function fields', () => {
   const cancelButton = defineButton({ id: 'cancel', async execute() {} })
 
   const manifest = buildManifest({
-    commands: [pingCommand, askCommand],
-    events: [readyEvent, joinEvent],
-    buttons: [confirmButton, cancelButton],
+    commands: [pingCommand.descriptor, askCommand.descriptor],
+    events: [readyEvent.descriptor, joinEvent.descriptor],
+    buttons: [confirmButton.descriptor, cancelButton.descriptor],
   })
   const json = manifestToJson(manifest)
 
@@ -38,25 +38,36 @@ test('builds deterministic manifests without function fields', () => {
       {
         kind: 'command',
         name: 'ask',
-        options: [{ name: 'target-user', kind: 'user', required: true }],
+        description: 'Ask',
+        route: ['ask'],
+        options: [{ property: 'targetUser', name: 'target-user', kind: 'user', description: 'target', required: true }],
       },
-      { kind: 'command', name: 'ping', options: [] },
+      { kind: 'command', name: 'ping', description: 'Pong', route: ['ping'], options: [] },
     ],
     events: [
-      { name: 'guildMemberAdd', once: false },
-      { name: 'ready', once: true },
+      { kind: 'event', name: 'guildMemberAdd', once: false },
+      { kind: 'event', name: 'ready', once: true },
     ],
     buttons: [
-      { id: 'cancel', params: [] },
+      { kind: 'button', id: 'cancel', params: [] },
       {
+        kind: 'button',
         id: 'confirm',
         params: [
-          { name: 'mode', kind: 'enum' },
+          { name: 'mode', kind: 'enum', values: ['yes', 'no'] },
           { name: 'userId', kind: 'snowflake' },
         ],
       },
     ],
   })
-  expect(manifestToJson(buildManifest({ commands: [askCommand, pingCommand], events: [joinEvent, readyEvent], buttons: [cancelButton, confirmButton] }))).toBe(json)
+  expect(
+    manifestToJson(
+      buildManifest({
+        commands: [askCommand.descriptor, pingCommand.descriptor],
+        events: [joinEvent.descriptor, readyEvent.descriptor],
+        buttons: [cancelButton.descriptor, confirmButton.descriptor],
+      }),
+    ),
+  ).toBe(json)
   expect(json).not.toContain('execute')
 })

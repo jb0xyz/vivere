@@ -11,15 +11,17 @@ test('serializes IR without functions, deterministically', () => {
     options: { targetUser: opt.user('t'), silent: opt.boolean('s').optional() },
     async execute() {},
   })
-  const a = serializeCommand(cmd)
-  const b = serializeCommand(cmd)
+  const a = serializeCommand(cmd.descriptor)
+  const b = serializeCommand(cmd.descriptor)
   expect(JSON.stringify(a)).toBe(JSON.stringify(b))
   expect(a).toEqual({
     kind: 'command',
     name: 'assign-role',
+    description: 'assign',
+    route: ['assign-role'],
     options: [
-      { name: 'silent', kind: 'boolean', required: false },
-      { name: 'target-user', kind: 'user', required: true },
+      { property: 'silent', name: 'silent', kind: 'boolean', description: 's', required: false },
+      { property: 'targetUser', name: 'target-user', kind: 'user', description: 't', required: true },
     ],
   })
   expect(JSON.stringify(a)).not.toContain('execute')

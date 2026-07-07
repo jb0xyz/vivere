@@ -1,20 +1,11 @@
-import type { ButtonIR, CommandIR, EventIR } from '../authoring/create-vivere.js'
+import type { ButtonDescriptor, CommandDescriptor, EventDescriptor, ParamDescriptor } from '../authoring/ir.js'
 import { serializeCommand, type SerializedCommand } from './serialize.js'
 
-export interface SerializedEvent {
-  name: string
-  once: boolean
-}
+export type SerializedEvent = EventDescriptor
 
-export interface SerializedButtonParam {
-  name: string
-  kind: string
-}
+export type SerializedButtonParam = ParamDescriptor
 
-export interface SerializedButton {
-  id: string
-  params: SerializedButtonParam[]
-}
+export type SerializedButton = ButtonDescriptor
 
 export interface Manifest {
   schemaVersion: 1
@@ -24,25 +15,27 @@ export interface Manifest {
 }
 
 export interface BuildManifestInput {
-  commands: CommandIR[]
-  events: EventIR[]
-  buttons: ButtonIR[]
+  commands: CommandDescriptor[]
+  events: EventDescriptor[]
+  buttons: ButtonDescriptor[]
 }
 
-export function serializeEvent(event: EventIR): SerializedEvent {
-  return {
-    name: String(event.name),
-    once: event.once,
-  }
+export function serializeEvent(event: EventDescriptor): SerializedEvent {
+  return { ...event }
 }
 
-export function serializeButton(button: ButtonIR): SerializedButton {
-  const params = Object.entries(button.params)
-    .map(([name, node]) => ({ name, kind: node.kind }))
+export function serializeButton(button: ButtonDescriptor): SerializedButton {
+  const params = button.params
+    .map((param) => ({
+      name: param.name,
+      kind: param.kind,
+      ...(param.maxLength === undefined ? {} : { maxLength: param.maxLength }),
+      ...(param.values === undefined ? {} : { values: [...param.values] }),
+    }))
     .sort((a, b) => a.name.localeCompare(b.name))
 
   return {
-    id: button.id,
+    ...button,
     params,
   }
 }

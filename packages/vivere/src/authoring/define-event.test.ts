@@ -4,12 +4,10 @@ import { createVivere } from './create-vivere.js'
 const { defineEvent } = createVivere<{ n: number }>()
 
 describe('defineEvent', () => {
-  test('returns an event IR with once defaulting to false', () => {
+  test('returns an event definition with a descriptor', () => {
     const event = defineEvent({ name: 'ready', async execute() {} })
 
-    expect(event.kind).toBe('event')
-    expect(event.name).toBe('ready')
-    expect(event.once).toBe(false)
+    expect(event.descriptor).toEqual({ kind: 'event', name: 'ready', once: false })
   })
 
   test('captures once and callable execute', async () => {
@@ -22,7 +20,7 @@ describe('defineEvent', () => {
 
     await event.execute({ services: { n: 1 }, client: {} as never }, { id: 'member-1' })
 
-    expect(event.once).toBe(true)
+    expect(event.descriptor.once).toBe(true)
     expect(spy).toHaveBeenCalledOnce()
   })
 })
