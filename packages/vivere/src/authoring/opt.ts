@@ -1,15 +1,23 @@
-import type { Attachment, GuildMember, Role, User } from 'discord.js'
+import type { Attachment, Role, User } from 'discord.js'
 
 export type Presence = 'required' | 'optional'
+export type OptionKind =
+  | 'string'
+  | 'integer'
+  | 'number'
+  | 'boolean'
+  | 'user'
+  | 'role'
+  | 'attachment'
 
 export interface OptionNode<TValue, TPresence extends Presence> {
-  readonly kind: string
+  readonly kind: OptionKind
   readonly description: string
   readonly presence: TPresence
   optional(): OptionNode<TValue, 'optional'>
 }
 
-function node<TValue>(kind: string, description: string): OptionNode<TValue, 'required'> {
+function node<TValue>(kind: OptionKind, description: string): OptionNode<TValue, 'required'> {
   return {
     kind,
     description,
@@ -26,7 +34,6 @@ export const opt = {
   number: (description: string) => node<number>('number', description),
   boolean: (description: string) => node<boolean>('boolean', description),
   user: (description: string) => node<User>('user', description),
-  member: (description: string) => node<GuildMember>('member', description),
   role: (description: string) => node<Role>('role', description),
   attachment: (description: string) => node<Attachment>('attachment', description),
 }

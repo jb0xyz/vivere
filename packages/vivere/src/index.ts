@@ -4,6 +4,7 @@ export type { CommandIR, CommandInput } from './authoring/create-vivere.js'
 export { opt } from './authoring/opt.js'
 export type {
   OptionNode,
+  OptionKind,
   Presence,
   AnyOption,
   OptionsRecord,

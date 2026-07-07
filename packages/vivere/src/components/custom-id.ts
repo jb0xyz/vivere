@@ -9,6 +9,7 @@ export class CustomIdTooLongError extends Error {
 }
 
 export function encodeCustomId(id: string, params: Record<string, string>): string {
+  if (!/^[a-z0-9-]+$/.test(id)) throw new Error(`Invalid customId id: ${id}`)
   const payload = new URLSearchParams(params).toString()
   const raw = `${CUSTOM_ID_VERSION}:${id}:${payload}`
   if (raw.length > CUSTOM_ID_MAX) throw new CustomIdTooLongError(raw.length)
@@ -16,7 +17,10 @@ export function encodeCustomId(id: string, params: Record<string, string>): stri
 }
 
 export function decodeCustomId(raw: string): { id: string; params: Record<string, string> } {
-  const [version, id, payload = ''] = raw.split(':')
+  const parts = raw.split(':')
+  if (parts.length !== 3) throw new Error('Malformed customId')
+  const [version, id, payload] = parts
   if (version !== CUSTOM_ID_VERSION) throw new Error(`Unknown customId version: ${version}`)
+  if (!id) throw new Error('Missing customId id')
   return { id, params: Object.fromEntries(new URLSearchParams(payload)) }
 }

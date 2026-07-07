@@ -17,4 +17,13 @@ describe('customId', () => {
   test('throws when payload exceeds 100 chars', () => {
     expect(() => encodeCustomId('x', { blob: 'a'.repeat(200) })).toThrow(CustomIdTooLongError)
   })
+
+  test('throws when id contains unsupported characters', () => {
+    expect(() => encodeCustomId('role:confirm', {})).toThrow('Invalid customId id')
+  })
+
+  test('throws for malformed encoded values', () => {
+    expect(() => decodeCustomId('c1')).toThrow('Malformed customId')
+    expect(() => decodeCustomId('c1::')).toThrow('Missing customId id')
+  })
 })

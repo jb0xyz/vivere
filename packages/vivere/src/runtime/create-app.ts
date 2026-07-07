@@ -11,36 +11,46 @@ export interface AppConfig {
   devGuildId?: string
 }
 
-export interface CreateAppOptions {
+export interface CreateAppOptions<TServices> {
   config: AppConfig
-  createServices: () => Promise<unknown>
-  commands: CommandIR[]
+  createServices: () => Promise<TServices>
+  commands: CommandIR<TServices>[]
 }
 
 export interface App {
   start(): Promise<void>
 }
 
-export function createApp(options: CreateAppOptions): App {
+export function createApp<TServices>(options: CreateAppOptions<TServices>): App {
   const { config, createServices, commands } = options
   const router = createRouter(commands)
   const client = new Client({ intents: config.intents })
 
   client.on('interactionCreate', (interaction) => {
-    void handleInteraction(interaction, router, createServices)
+    void handleInteraction(interaction, router, createServices).catch((error: unknown) => {
+      // Route this through app-level onError when that API exists.
+      console.error(error)
+    })
   })
 
   return {
     async start() {
-      client.once('ready', (ready) => {
-        if (!config.devGuildId) return
-        // Register commands to the development guild on startup for fast iteration.
-        void ready.application.commands.set(
-          commands.map(toCommandJSON) as ApplicationCommandDataResolvable[],
-          config.devGuildId,
-        )
+      const readyPromise = new Promise<void>((resolve, reject) => {
+        client.once('ready', (ready) => {
+          if (!config.devGuildId) {
+            resolve()
+            return
+          }
+
+          ready.application.commands
+            .set(commands.map(toCommandJSON) as ApplicationCommandDataResolvable[], config.devGuildId)
+            .then(() => resolve())
+            .catch((error: unknown) => reject(error))
+        })
       })
+
       await client.login(config.token)
+      await readyPromise
     },
   }
 }

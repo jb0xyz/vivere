@@ -1,19 +1,19 @@
 import { ApplicationCommandOptionType, ApplicationCommandType } from 'discord.js'
 import type { CommandIR } from '../authoring/create-vivere.js'
+import type { OptionKind } from '../authoring/opt.js'
 import { toDiscordName } from '../manifest/serialize.js'
 
-const OPTION_TYPE: Record<string, ApplicationCommandOptionType> = {
+const OPTION_TYPE = {
   string: ApplicationCommandOptionType.String,
   integer: ApplicationCommandOptionType.Integer,
   number: ApplicationCommandOptionType.Number,
   boolean: ApplicationCommandOptionType.Boolean,
   user: ApplicationCommandOptionType.User,
-  member: ApplicationCommandOptionType.User,
   role: ApplicationCommandOptionType.Role,
   attachment: ApplicationCommandOptionType.Attachment,
-}
+} satisfies Record<OptionKind, ApplicationCommandOptionType>
 
-export function toCommandJSON(ir: CommandIR) {
+export function toCommandJSON<TServices>(ir: CommandIR<TServices>) {
   const options = Object.entries(ir.options)
     .map(([key, node]) => ({
       name: toDiscordName(key),

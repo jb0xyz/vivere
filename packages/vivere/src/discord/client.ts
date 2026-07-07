@@ -9,27 +9,23 @@ export function toChatInputAdapter(
 ): ChatInputInteractionAdapter {
   return {
     commandName: interaction.commandName,
-    getOption(name, kind) {
+    getOption(name, kind, required) {
       const o = interaction.options
       switch (kind) {
         case 'string':
-          return o.getString(name) ?? undefined
+          return o.getString(name, required) ?? undefined
         case 'integer':
-          return o.getInteger(name) ?? undefined
+          return o.getInteger(name, required) ?? undefined
         case 'number':
-          return o.getNumber(name) ?? undefined
+          return o.getNumber(name, required) ?? undefined
         case 'boolean':
-          return o.getBoolean(name) ?? undefined
+          return o.getBoolean(name, required) ?? undefined
         case 'user':
-          return o.getUser(name) ?? undefined
-        case 'member':
-          return o.getMember(name) ?? undefined
+          return o.getUser(name, required) ?? undefined
         case 'role':
-          return o.getRole(name) ?? undefined
+          return o.getRole(name, required) ?? undefined
         case 'attachment':
-          return o.getAttachment(name) ?? undefined
-        default:
-          return undefined
+          return o.getAttachment(name, required) ?? undefined
       }
     },
     async reply(input: ReplyInput) {
@@ -48,10 +44,10 @@ export function toChatInputAdapter(
   }
 }
 
-export async function handleInteraction(
+export async function handleInteraction<TServices>(
   interaction: Interaction,
-  router: InteractionRouter,
-  createServices: () => Promise<unknown>,
+  router: InteractionRouter<TServices>,
+  createServices: () => Promise<TServices>,
 ): Promise<void> {
   if (!interaction.isChatInputCommand()) return
   const adapter = toChatInputAdapter(interaction)

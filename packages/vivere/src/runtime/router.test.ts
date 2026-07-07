@@ -62,6 +62,36 @@ test('resolves declared options into ctx.options by their TS keys', async () => 
   expect(seen).toEqual({ targetUser: 'abc', loud: true })
 })
 
+test('passes required option presence to the adapter', async () => {
+  const seenList: Array<{ name: string; required: boolean }> = []
+  const inspect = defineCommand({
+    name: 'inspect',
+    description: 'inspect',
+    options: {
+      note: opt.string('note'),
+      loud: opt.boolean('loud').optional(),
+    },
+    async execute() {},
+  })
+  const router = createRouter([inspect])
+  const adapter: ChatInputInteractionAdapter = {
+    commandName: 'inspect',
+    getOption(name, _kind, required) {
+      seenList.push({ name, required })
+      return undefined
+    },
+    async reply() {},
+    async deferReply() {},
+  }
+
+  await router.dispatch(adapter, { services: { mark: () => {} } })
+
+  expect(seenList).toEqual([
+    { name: 'note', required: true },
+    { name: 'loud', required: false },
+  ])
+})
+
 test('ignores unknown command names', async () => {
   const router = createRouter([])
   const adapter = fakeAdapter('nope')
