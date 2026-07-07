@@ -1,5 +1,6 @@
 import { GatewayIntentBits, createApp } from 'vivere'
 import { createServices } from './app/services.js'
+import config from '../vivere.config.js'
 
 const app = createApp({
   config: {
@@ -8,11 +9,7 @@ const app = createApp({
     devGuildId: process.env.DEV_GUILD_ID,
   },
   createServices,
-  discover: {
-    commands: 'src/commands',
-    events: 'src/events',
-    components: 'src/components',
-  },
+  discover: config.discovery,
 })
 
 await app.start()

@@ -4,6 +4,7 @@ import type { InteractionReplyOptions, InteractionUpdateOptions } from 'discord.
 import type { ReplyInput } from '../authoring/types.js'
 import type { ButtonInteractionAdapter, ChatInputInteractionAdapter } from '../runtime/interaction-adapter.js'
 import type { InteractionRouter } from '../runtime/router.js'
+import { DISCORD_OPTION_KIND } from './option-kinds.js'
 
 function toInteractionReply(input: ReplyInput): InteractionReplyOptions {
   if (typeof input === 'string') return { content: input }
@@ -32,23 +33,7 @@ export function toChatInputAdapter(
   return {
     commandName: interaction.commandName,
     getOption(name, kind, required) {
-      const o = interaction.options
-      switch (kind) {
-        case 'string':
-          return o.getString(name, required) ?? undefined
-        case 'integer':
-          return o.getInteger(name, required) ?? undefined
-        case 'number':
-          return o.getNumber(name, required) ?? undefined
-        case 'boolean':
-          return o.getBoolean(name, required) ?? undefined
-        case 'user':
-          return o.getUser(name, required) ?? undefined
-        case 'role':
-          return o.getRole(name, required) ?? undefined
-        case 'attachment':
-          return o.getAttachment(name, required) ?? undefined
-      }
+      return DISCORD_OPTION_KIND[kind].get(interaction.options, name, required)
     },
     async reply(input: ReplyInput) {
       await interaction.reply(toInteractionReply(input))

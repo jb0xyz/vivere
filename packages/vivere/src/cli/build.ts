@@ -3,7 +3,7 @@ import { dirname, join, resolve } from 'node:path'
 import { pathToFileURL } from 'node:url'
 import { createJiti } from 'jiti'
 import type { VivereConfig } from '../config/define-config.js'
-import { discoverButtons, discoverCommands, discoverEvents } from '../discovery/discover.js'
+import { resolveProjectDefinitions } from '../discovery/project-definitions.js'
 import { buildManifest, manifestToJson } from '../manifest/manifest.js'
 
 export interface RunBuildInput {
@@ -37,19 +37,16 @@ export async function runBuild(input: RunBuildInput): Promise<RunBuildResult> {
   const configDir = dirname(configPath)
   const jiti = createJiti(pathToFileURL(configPath).href)
   const importer = (absPath: string) => jiti.import(absPath)
-
-  const commands = await discoverCommands(resolve(configDir, config.discovery.commands), { import: importer })
-  const events = config.discovery.events
-    ? await discoverEvents(resolve(configDir, config.discovery.events), { import: importer })
-    : []
-  const buttons = config.discovery.components
-    ? await discoverButtons(resolve(configDir, config.discovery.components), { import: importer })
-    : []
+  const definitions = await resolveProjectDefinitions({
+    baseDir: configDir,
+    discovery: config.discovery,
+    importer,
+  })
   const manifestJson = manifestToJson(
     buildManifest({
-      commands: commands.map((command) => command.descriptor),
-      events: events.map((event) => event.descriptor),
-      buttons: buttons.map((button) => button.descriptor),
+      commands: definitions.commands.map((command) => command.descriptor),
+      events: definitions.events.map((event) => event.descriptor),
+      buttons: definitions.buttons.map((button) => button.descriptor),
     }),
   )
   const manifestPath = join(cwd, '.vivere/manifest.json')

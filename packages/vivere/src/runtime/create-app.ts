@@ -1,10 +1,9 @@
 import { createHmac } from 'node:crypto'
-import { resolve } from 'node:path'
 import { Client } from 'discord.js'
 import type { ApplicationCommandDataResolvable, GatewayIntentBits } from 'discord.js'
 import type { ButtonDefinition, CommandDefinition, EventDefinition } from '../authoring/create-vivere.js'
-import type { DiscoverOptions } from '../discovery/discover.js'
-import { discoverButtons, discoverCommands, discoverEvents } from '../discovery/discover.js'
+import type { ProjectDiscoveryConfig } from '../discovery/project-definitions.js'
+import { resolveProjectDefinitions } from '../discovery/project-definitions.js'
 import { handleInteraction } from '../discord/client.js'
 import { toCommandJSON } from '../discord/to-command-json.js'
 import { registerEvents } from './events.js'
@@ -16,11 +15,7 @@ export interface AppConfig {
   devGuildId?: string
 }
 
-export interface AppDiscoveryConfig {
-  commands?: string
-  events?: string
-  components?: string
-}
+export type AppDiscoveryConfig = ProjectDiscoveryConfig
 
 export interface CreateAppOptions<TServices> {
   config: AppConfig
@@ -49,42 +44,20 @@ export interface App {
   start(): Promise<void>
 }
 
-function assertUnique(items: readonly string[], label: string): void {
-  const seen = new Set<string>()
-  for (const item of items) {
-    if (seen.has(item)) throw new Error(`Duplicate ${label} "${item}"`)
-    seen.add(item)
-  }
-}
-
 export async function resolveDefinitions<TServices>(
   input: ResolveDefinitionsInput<TServices>,
-  importer?: DiscoverOptions['import'],
+  importer?: (absPath: string) => Promise<unknown>,
 ): Promise<ResolvedDefinitions<TServices>> {
-  const discoverOptions = importer ? { import: importer } : undefined
-  const discoveredCommands = input.discover?.commands
-    ? await discoverCommands<TServices>(resolve(input.cwd, input.discover.commands), discoverOptions)
-    : []
-  const discoveredEvents = input.discover?.events
-    ? await discoverEvents<TServices>(resolve(input.cwd, input.discover.events), discoverOptions)
-    : []
-  const discoveredButtons = input.discover?.components
-    ? await discoverButtons<TServices>(resolve(input.cwd, input.discover.components), discoverOptions)
-    : []
-  const commands = [...(input.commands ?? []), ...discoveredCommands]
-  const events = [...(input.events ?? []), ...discoveredEvents]
-  const buttons = [...(input.buttons ?? []), ...discoveredButtons]
-
-  assertUnique(
-    commands.map((command) => command.descriptor.name),
-    'command name',
-  )
-  assertUnique(
-    buttons.map((button) => button.descriptor.id),
-    'button id',
-  )
-
-  return { commands, events, buttons }
+  return resolveProjectDefinitions({
+    baseDir: input.cwd,
+    discovery: input.discover,
+    explicit: {
+      commands: input.commands,
+      events: input.events,
+      buttons: input.buttons,
+    },
+    importer,
+  })
 }
 
 export function createApp<TServices>(options: CreateAppOptions<TServices>): App {

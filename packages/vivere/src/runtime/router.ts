@@ -5,6 +5,7 @@ import type { CommandContext } from '../authoring/types.js'
 import type { ButtonDefinitionForParams } from '../authoring/types.js'
 import type { ButtonStyleName, ComponentsBuilder } from '../authoring/types.js'
 import { decodeCustomId, encodeCustomId } from '../components/custom-id.js'
+import { createRegistry } from '../internal/collections.js'
 import type { ButtonInteractionAdapter, ChatInputInteractionAdapter } from './interaction-adapter.js'
 
 export interface DispatchDeps<TServices> {
@@ -75,8 +76,8 @@ function createComponentsBuilder(secret: string): ComponentsBuilder {
 }
 
 export function createRouter<TServices>(options: CreateRouterOptions<TServices>): InteractionRouter<TServices> {
-  const commandRegistry = new Map(options.commands.map((command) => [command.descriptor.name, command] as const))
-  const buttonRegistry = new Map(options.buttons.map((button) => [button.descriptor.id, button] as const))
+  const commandRegistry = createRegistry(options.commands, (command) => command.descriptor.name)
+  const buttonRegistry = createRegistry(options.buttons, (button) => button.descriptor.id)
   const components = createComponentsBuilder(options.secret)
 
   return {

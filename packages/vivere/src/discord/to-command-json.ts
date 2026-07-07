@@ -1,23 +1,13 @@
-import { ApplicationCommandOptionType, ApplicationCommandType } from 'discord.js'
+import { ApplicationCommandType } from 'discord.js'
 import type { CommandDescriptor } from '../authoring/ir.js'
-import type { OptionKind } from '../authoring/opt.js'
-
-const OPTION_TYPE = {
-  string: ApplicationCommandOptionType.String,
-  integer: ApplicationCommandOptionType.Integer,
-  number: ApplicationCommandOptionType.Number,
-  boolean: ApplicationCommandOptionType.Boolean,
-  user: ApplicationCommandOptionType.User,
-  role: ApplicationCommandOptionType.Role,
-  attachment: ApplicationCommandOptionType.Attachment,
-} satisfies Record<OptionKind, ApplicationCommandOptionType>
+import { DISCORD_OPTION_KIND } from './option-kinds.js'
 
 export function toCommandJSON(descriptor: CommandDescriptor) {
   const options = descriptor.options
     .map((option) => ({
       name: option.name,
       description: option.description,
-      type: OPTION_TYPE[option.kind],
+      type: DISCORD_OPTION_KIND[option.kind].discordType,
       required: option.required,
     }))
     .sort((a, b) => Number(b.required) - Number(a.required))

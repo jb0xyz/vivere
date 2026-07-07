@@ -2,8 +2,16 @@ import { readdir } from 'node:fs/promises'
 import { basename, extname, join, resolve } from 'node:path'
 import { pathToFileURL } from 'node:url'
 import type { ButtonDefinition, CommandDefinition, EventDefinition } from '../authoring/create-vivere.js'
+import { assertUnique } from '../internal/collections.js'
 
 type DiscoverableDefinition = ButtonDefinition | CommandDefinition | EventDefinition
+type DefinitionKind = DiscoverableDefinition['descriptor']['kind']
+type DefinitionByKind<TServices, TKind extends DefinitionKind> = TKind extends 'command'
+  ? CommandDefinition<TServices>
+  : TKind extends 'event'
+    ? EventDefinition<TServices>
+    : ButtonDefinition<TServices>
+
 export interface DiscoverOptions {
   import?: (absPath: string) => Promise<unknown>
 }
@@ -47,71 +55,61 @@ function getFileBaseName(path: string): string {
   return basename(path, extname(path))
 }
 
-function assertUnique(items: readonly string[], label: string): void {
-  const seen = new Set<string>()
-  for (const item of items) {
-    if (seen.has(item)) throw new Error(`Duplicate ${label} "${item}"`)
-    seen.add(item)
+async function discover<TServices, TKind extends DefinitionKind>(
+  dir: string,
+  kind: TKind,
+  options: DiscoverOptions = {},
+): Promise<Array<DefinitionByKind<TServices, TKind>>> {
+  const importer = options.import ?? nativeImport
+  const fileList = await collectFileList(resolve(dir))
+  const definitionList = await Promise.all(
+    fileList.map(async (file) => {
+      const value = await importDefault(file, importer)
+      if (value.descriptor.kind !== kind) throw new Error(`Expected ${kind} default export from ${file}`)
+      if (kind === 'command') {
+        const command = value as CommandDefinition<TServices>
+        const fileName = getFileBaseName(file)
+        if (command.descriptor.name !== fileName) {
+          throw new Error(`Command name "${command.descriptor.name}" must match file name "${fileName}"`)
+        }
+      }
+      return value as DefinitionByKind<TServices, TKind>
+    }),
+  )
+
+  if (kind === 'command') {
+    assertUnique(
+      definitionList.map((definition) => (definition as CommandDefinition<TServices>).descriptor.name),
+      'command name',
+    )
   }
+  if (kind === 'button') {
+    assertUnique(
+      definitionList.map((definition) => (definition as ButtonDefinition<TServices>).descriptor.id),
+      'button id',
+    )
+  }
+
+  return definitionList
 }
 
 export async function discoverCommands<TServices = unknown>(
   dir: string,
   options: DiscoverOptions = {},
 ): Promise<CommandDefinition<TServices>[]> {
-  const importer = options.import ?? nativeImport
-  const fileList = await collectFileList(resolve(dir))
-  const commandList = await Promise.all(
-    fileList.map(async (file) => {
-      const value = await importDefault(file, importer)
-      if (value.descriptor.kind !== 'command') throw new Error(`Expected command default export from ${file}`)
-      const fileName = getFileBaseName(file)
-      if (value.descriptor.name !== fileName) {
-        throw new Error(`Command name "${value.descriptor.name}" must match file name "${fileName}"`)
-      }
-      return value as CommandDefinition<TServices>
-    }),
-  )
-
-  assertUnique(
-    commandList.map((command) => command.descriptor.name),
-    'command name',
-  )
-  return commandList
+  return discover<TServices, 'command'>(dir, 'command', options)
 }
 
 export async function discoverEvents<TServices = unknown>(
   dir: string,
   options: DiscoverOptions = {},
 ): Promise<EventDefinition<TServices>[]> {
-  const importer = options.import ?? nativeImport
-  const fileList = await collectFileList(resolve(dir))
-  return Promise.all(
-    fileList.map(async (file) => {
-      const value = await importDefault(file, importer)
-      if (value.descriptor.kind !== 'event') throw new Error(`Expected event default export from ${file}`)
-      return value as EventDefinition<TServices>
-    }),
-  )
+  return discover<TServices, 'event'>(dir, 'event', options)
 }
 
 export async function discoverButtons<TServices = unknown>(
   dir: string,
   options: DiscoverOptions = {},
 ): Promise<ButtonDefinition<TServices>[]> {
-  const importer = options.import ?? nativeImport
-  const fileList = await collectFileList(resolve(dir))
-  const buttonList = await Promise.all(
-    fileList.map(async (file) => {
-      const value = await importDefault(file, importer)
-      if (value.descriptor.kind !== 'button') throw new Error(`Expected button default export from ${file}`)
-      return value as ButtonDefinition<TServices>
-    }),
-  )
-
-  assertUnique(
-    buttonList.map((button) => button.descriptor.id),
-    'button id',
-  )
-  return buttonList
+  return discover<TServices, 'button'>(dir, 'button', options)
 }
