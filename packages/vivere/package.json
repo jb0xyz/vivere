@@ -1,0 +1,45 @@
+{
+  "name": "vivere",
+  "version": "0.1.0",
+  "description": "A TypeScript framework for building maintainable Discord bots.",
+  "keywords": [
+    "discord",
+    "discord-bot",
+    "discord.js",
+    "bot-framework",
+    "typescript"
+  ],
+  "homepage": "https://github.com/jb0xyz/vivere#readme",
+  "bugs": "https://github.com/jb0xyz/vivere/issues",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/jb0xyz/vivere.git",
+    "directory": "packages/vivere"
+  },
+  "license": "MIT",
+  "author": "jb0xyz",
+  "type": "module",
+  "sideEffects": false,
+  "engines": { "node": ">=20.11" },
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": ["dist"],
+  "scripts": {
+    "build": "tsup",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "discord.js": "^14.16.0"
+  },
+  "devDependencies": {
+    "tsup": "^8.3.0",
+    "vitest": "^2.1.0",
+    "expect-type": "^1.1.0",
+    "typescript": "^5.6.0"
+  }
+}
