@@ -19,6 +19,8 @@ export type {
 } from './authoring/opt.js'
 export { param } from './authoring/param.js'
 export type { InferParams, ParamKind, ParamNode, ParamsRecord } from './authoring/param.js'
+export { defineConfig } from './config/define-config.js'
+export type { VivereConfig } from './config/define-config.js'
 export type {
   ButtonActionRow,
   ButtonContext,

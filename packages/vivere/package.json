@@ -21,6 +21,9 @@
   "type": "module",
   "sideEffects": false,
   "engines": { "node": ">=20.11" },
+  "bin": {
+    "vivere": "./dist/cli.js"
+  },
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
@@ -34,7 +37,8 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "discord.js": "^14.16.0"
+    "discord.js": "^14.16.0",
+    "jiti": "^2.6.1"
   },
   "devDependencies": {
     "tsup": "^8.3.0",

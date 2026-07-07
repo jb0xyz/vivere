@@ -4,6 +4,9 @@ import { pathToFileURL } from 'node:url'
 import type { ButtonIR, CommandIR, EventIR } from '../authoring/create-vivere.js'
 
 type DiscoverableIR = ButtonIR | CommandIR | EventIR
+export interface DiscoverOptions {
+  import?: (absPath: string) => Promise<unknown>
+}
 
 function isSourceFile(path: string): boolean {
   if (!/\.(ts|js)$/.test(path)) return false
@@ -27,9 +30,13 @@ async function collectFileList(dir: string): Promise<string[]> {
   return fileList.flat().sort((a, b) => a.localeCompare(b))
 }
 
-async function importDefault(path: string): Promise<DiscoverableIR> {
-  const mod = (await import(pathToFileURL(path).href)) as { default?: unknown }
-  const value = mod.default
+async function nativeImport(absPath: string): Promise<unknown> {
+  return import(pathToFileURL(absPath).href)
+}
+
+async function importDefault(path: string, importer: (absPath: string) => Promise<unknown>): Promise<DiscoverableIR> {
+  const mod = await importer(path)
+  const value = mod && typeof mod === 'object' && 'default' in mod ? mod.default : mod
   if (!value || typeof value !== 'object' || !('kind' in value)) {
     throw new Error(`Expected default export from ${path}`)
   }
@@ -48,11 +55,15 @@ function assertUnique(items: readonly string[], label: string): void {
   }
 }
 
-export async function discoverCommands<TServices = unknown>(dir: string): Promise<CommandIR<TServices>[]> {
+export async function discoverCommands<TServices = unknown>(
+  dir: string,
+  options: DiscoverOptions = {},
+): Promise<CommandIR<TServices>[]> {
+  const importer = options.import ?? nativeImport
   const fileList = await collectFileList(resolve(dir))
   const commandList = await Promise.all(
     fileList.map(async (file) => {
-      const value = await importDefault(file)
+      const value = await importDefault(file, importer)
       if (value.kind !== 'command') throw new Error(`Expected command default export from ${file}`)
       const fileName = getFileBaseName(file)
       if (value.name !== fileName) {
@@ -69,22 +80,30 @@ export async function discoverCommands<TServices = unknown>(dir: string): Promis
   return commandList
 }
 
-export async function discoverEvents<TServices = unknown>(dir: string): Promise<EventIR<TServices>[]> {
+export async function discoverEvents<TServices = unknown>(
+  dir: string,
+  options: DiscoverOptions = {},
+): Promise<EventIR<TServices>[]> {
+  const importer = options.import ?? nativeImport
   const fileList = await collectFileList(resolve(dir))
   return Promise.all(
     fileList.map(async (file) => {
-      const value = await importDefault(file)
+      const value = await importDefault(file, importer)
       if (value.kind !== 'event') throw new Error(`Expected event default export from ${file}`)
       return value as EventIR<TServices>
     }),
   )
 }
 
-export async function discoverButtons<TServices = unknown>(dir: string): Promise<ButtonIR<TServices>[]> {
+export async function discoverButtons<TServices = unknown>(
+  dir: string,
+  options: DiscoverOptions = {},
+): Promise<ButtonIR<TServices>[]> {
+  const importer = options.import ?? nativeImport
   const fileList = await collectFileList(resolve(dir))
   const buttonList = await Promise.all(
     fileList.map(async (file) => {
-      const value = await importDefault(file)
+      const value = await importDefault(file, importer)
       if (value.kind !== 'button') throw new Error(`Expected button default export from ${file}`)
       return value as ButtonIR<TServices>
     }),
