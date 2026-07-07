@@ -1,0 +1,32 @@
+{
+  "schemaVersion": 1,
+  "commands": [
+    {
+      "kind": "command",
+      "name": "ask",
+      "options": []
+    },
+    {
+      "kind": "command",
+      "name": "ping",
+      "options": []
+    }
+  ],
+  "events": [
+    {
+      "name": "ready",
+      "once": true
+    }
+  ],
+  "buttons": [
+    {
+      "id": "confirm",
+      "params": [
+        {
+          "name": "userId",
+          "kind": "snowflake"
+        }
+      ]
+    }
+  ]
+}

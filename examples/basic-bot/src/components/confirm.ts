@@ -1,6 +1,6 @@
 import { defineButton, param } from '../app/vivere.js'
 
-export const confirmButton = defineButton({
+export default defineButton({
   id: 'confirm',
   params: { userId: param.snowflake() },
   async execute(ctx) {

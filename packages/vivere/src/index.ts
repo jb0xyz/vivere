@@ -54,6 +54,13 @@ export type {
   ButtonInteractionAdapter,
   ChatInputInteractionAdapter,
 } from './runtime/interaction-adapter.js'
-export { createApp } from './runtime/create-app.js'
-export type { App, AppConfig, CreateAppOptions } from './runtime/create-app.js'
+export { createApp, resolveDefinitions } from './runtime/create-app.js'
+export type {
+  App,
+  AppConfig,
+  AppDiscoveryConfig,
+  CreateAppOptions,
+  ResolvedDefinitions,
+  ResolveDefinitionsInput,
+} from './runtime/create-app.js'
 export { GatewayIntentBits } from 'discord.js'

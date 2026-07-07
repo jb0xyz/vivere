@@ -1,6 +1,6 @@
 import { defineEvent } from '../app/vivere.js'
 
-export const readyEvent = defineEvent({
+export default defineEvent({
   name: 'ready',
   once: true,
   async execute(ctx) {

@@ -1,6 +1,6 @@
 import { defineCommand } from '../app/vivere.js'
 
-export const pingCommand = defineCommand({
+export default defineCommand({
   name: 'ping',
   description: 'Pong을 반환',
   async execute(ctx) {
