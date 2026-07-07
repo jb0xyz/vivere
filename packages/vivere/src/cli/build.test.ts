@@ -77,7 +77,7 @@ test('writes manifest from configured TypeScript files', async () => {
       },
     ],
     events: [{ kind: 'event', name: 'ready', once: true }],
-    buttons: [{ kind: 'button', id: 'confirm', params: [{ name: 'userId', kind: 'snowflake' }] }],
+    buttons: [{ kind: 'button', componentKind: 'button', id: 'confirm', params: [{ name: 'userId', kind: 'snowflake' }] }],
   })
 })
 

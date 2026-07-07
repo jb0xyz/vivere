@@ -49,9 +49,10 @@ test('builds deterministic manifests without function fields', () => {
       { kind: 'event', name: 'ready', once: true },
     ],
     buttons: [
-      { kind: 'button', id: 'cancel', params: [] },
+      { kind: 'button', componentKind: 'button', id: 'cancel', params: [] },
       {
         kind: 'button',
+        componentKind: 'button',
         id: 'confirm',
         params: [
           { name: 'mode', kind: 'enum', values: ['yes', 'no'] },

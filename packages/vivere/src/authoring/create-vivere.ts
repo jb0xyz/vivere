@@ -116,6 +116,7 @@ export function createVivere<TServices>() {
     return {
       descriptor: {
         kind: 'button',
+        componentKind: 'button',
         id: input.id,
         params: createParamDescriptors(params),
       },

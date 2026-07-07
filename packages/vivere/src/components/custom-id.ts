@@ -11,9 +11,11 @@ export class CustomIdTooLongError extends Error {
   }
 }
 
-function createSignature(id: string, payload: string, secret: string): string {
+export type ComponentKind = 'button'
+
+function createSignature(componentKind: ComponentKind, id: string, payload: string, secret: string): string {
   return createHmac('sha256', secret)
-    .update(`${CUSTOM_ID_VERSION}:${id}:${payload}`)
+    .update(`${CUSTOM_ID_VERSION}:${componentKind}:${id}:${payload}`)
     .digest('base64url')
     .slice(0, SIGNATURE_LENGTH)
 }
@@ -26,21 +28,31 @@ function assertValidSignature(actual: string, expected: string): void {
   }
 }
 
-export function encodeCustomId(id: string, params: Record<string, string>, secret: string): string {
+export function encodeCustomId(
+  componentKind: ComponentKind,
+  id: string,
+  params: Record<string, string>,
+  secret: string,
+): string {
+  if (!componentKind) throw new Error('Missing customId component kind')
   if (!/^[a-z0-9-]+$/.test(id)) throw new Error(`Invalid customId id: ${id}`)
   const payload = new URLSearchParams(params).toString()
-  const signature = createSignature(id, payload, secret)
-  const raw = `${CUSTOM_ID_VERSION}:${id}:${payload}:${signature}`
+  const signature = createSignature(componentKind, id, payload, secret)
+  const raw = `${CUSTOM_ID_VERSION}:${componentKind}:${id}:${payload}:${signature}`
   if (raw.length > CUSTOM_ID_MAX) throw new CustomIdTooLongError(raw.length)
   return raw
 }
 
-export function decodeCustomId(raw: string, secret: string): { id: string; params: Record<string, string> } {
+export function decodeCustomId(
+  raw: string,
+  secret: string,
+): { componentKind: ComponentKind; id: string; params: Record<string, string> } {
   const parts = raw.split(':')
-  if (parts.length !== 4) throw new Error('Malformed customId')
-  const [version, id, payload, signature] = parts
+  if (parts.length !== 5) throw new Error('Malformed customId')
+  const [version, componentKind, id, payload, signature] = parts
   if (version !== CUSTOM_ID_VERSION) throw new Error(`Unknown customId version: ${version}`)
+  if (!componentKind) throw new Error('Missing customId component kind')
   if (!id) throw new Error('Missing customId id')
-  assertValidSignature(signature ?? '', createSignature(id, payload ?? '', secret))
-  return { id, params: Object.fromEntries(new URLSearchParams(payload)) }
+  assertValidSignature(signature ?? '', createSignature(componentKind as ComponentKind, id, payload ?? '', secret))
+  return { componentKind: componentKind as ComponentKind, id, params: Object.fromEntries(new URLSearchParams(payload)) }
 }

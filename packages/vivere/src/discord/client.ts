@@ -31,6 +31,7 @@ export function toChatInputAdapter(
   interaction: ChatInputCommandInteraction,
 ): ChatInputInteractionAdapter {
   return {
+    kind: 'command',
     commandName: interaction.commandName,
     getOption(name, kind, required) {
       return DISCORD_OPTION_KIND[kind].get(interaction.options, name, required)
@@ -46,6 +47,7 @@ export function toChatInputAdapter(
 
 export function toButtonAdapter(interaction: ButtonInteraction): ButtonInteractionAdapter {
   return {
+    kind: 'button',
     customId: interaction.customId,
     async update(input) {
       await interaction.update(toInteractionUpdate(input))
@@ -67,13 +69,13 @@ export async function handleInteraction<TServices>(
   if (interaction.isChatInputCommand()) {
     const adapter = toChatInputAdapter(interaction)
     const services = await createServices()
-    await router.dispatchCommand(adapter, { services })
+    await router.dispatch(adapter, { services })
     return
   }
 
   if (interaction.isButton()) {
     const adapter = toButtonAdapter(interaction)
     const services = await createServices()
-    await router.dispatchButton(adapter, { services })
+    await router.dispatch(adapter, { services })
   }
 }

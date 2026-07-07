@@ -30,6 +30,7 @@
   "buttons": [
     {
       "kind": "button",
+      "componentKind": "button",
       "id": "confirm",
       "params": [
         {

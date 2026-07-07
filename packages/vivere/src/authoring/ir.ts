@@ -27,6 +27,7 @@ export interface ParamDescriptor {
 
 export interface ButtonDescriptor {
   kind: 'button'
+  componentKind: 'button'
   id: string
   params: ParamDescriptor[]
 }

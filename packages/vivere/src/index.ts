@@ -63,6 +63,8 @@ export type { InteractionRouter } from './runtime/router.js'
 export type {
   ButtonInteractionAdapter,
   ChatInputInteractionAdapter,
+  ComponentInteractionAdapter,
+  InteractionAdapter,
 } from './runtime/interaction-adapter.js'
 export { createApp, resolveDefinitions } from './runtime/create-app.js'
 export type {

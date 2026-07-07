@@ -14,6 +14,7 @@ function fakeAdapter(
 ): ChatInputInteractionAdapter & { replied: string[] } {
   const replied: string[] = []
   return {
+    kind: 'command',
     commandName,
     replied,
     getOption(name) {
@@ -39,7 +40,7 @@ test('dispatches to the matching command and builds ctx', async () => {
   const router = createRouter({ commands: [ping], buttons: [], secret })
   const adapter = fakeAdapter('ping')
 
-  await router.dispatchCommand(adapter, { services: { mark } })
+  await router.dispatch(adapter, { services: { mark } })
 
   expect(mark).toHaveBeenCalledOnce()
   expect(adapter.replied).toEqual(['Pong!'])
@@ -60,7 +61,7 @@ test('resolves declared options into ctx.options by their TS keys', async () => 
   // Adapter is keyed by Discord option name (kebab-case).
   const adapter = fakeAdapter('greet', { 'target-user': 'abc', loud: true })
 
-  await router.dispatchCommand(adapter, { services: { mark: () => {} } })
+  await router.dispatch(adapter, { services: { mark: () => {} } })
 
   expect(seen).toEqual({ targetUser: 'abc', loud: true })
 })
@@ -78,6 +79,7 @@ test('passes required option presence to the adapter', async () => {
   })
   const router = createRouter({ commands: [inspect], buttons: [], secret })
   const adapter: ChatInputInteractionAdapter = {
+    kind: 'command',
     commandName: 'inspect',
     getOption(name, _kind, required) {
       seenList.push({ name, required })
@@ -87,7 +89,7 @@ test('passes required option presence to the adapter', async () => {
     async deferReply() {},
   }
 
-  await router.dispatchCommand(adapter, { services: { mark: () => {} } })
+  await router.dispatch(adapter, { services: { mark: () => {} } })
 
   expect(seenList).toEqual([
     { name: 'note', required: true },
@@ -98,7 +100,7 @@ test('passes required option presence to the adapter', async () => {
 test('ignores unknown command names', async () => {
   const router = createRouter({ commands: [], buttons: [], secret })
   const adapter = fakeAdapter('nope')
-  await expect(router.dispatchCommand(adapter, { services: {} })).resolves.toBeUndefined()
+  await expect(router.dispatch(adapter, { services: {} })).resolves.toBeUndefined()
 })
 
 test('dispatches a button with decoded params', async () => {
@@ -118,10 +120,10 @@ test('dispatches a button with decoded params', async () => {
   })
   const router = createRouter({ commands: [], buttons: [confirm], secret })
   const adapter = fakeButtonAdapter(
-    encodeCustomId('confirm', { userId: '123456789012345678', silent: 'true' }, secret),
+    encodeCustomId('button', 'confirm', { userId: '123456789012345678', silent: 'true' }, secret),
   )
 
-  await router.dispatchButton(adapter, { services: { mark } })
+  await router.dispatch(adapter, { services: { mark } })
 
   expect(mark).toHaveBeenCalledOnce()
   expect(seen).toEqual({ userId: '123456789012345678', silent: true })
@@ -132,10 +134,10 @@ test('ignores unknown or invalid button custom ids', async () => {
   const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
   const router = createRouter({ commands: [], buttons: [], secret })
 
-  await router.dispatchButton(fakeButtonAdapter(encodeCustomId('missing', {}, secret)), {
+  await router.dispatch(fakeButtonAdapter(encodeCustomId('button', 'missing', {}, secret)), {
     services: { mark: () => {} },
   })
-  await router.dispatchButton(fakeButtonAdapter('c1:confirm:userId=123456789012345678:bad-signature'), {
+  await router.dispatch(fakeButtonAdapter('c1:button:confirm:userId=123456789012345678:bad-signature'), {
     services: { mark: () => {} },
   })
 
@@ -166,9 +168,10 @@ test('emits a typed button component with signed params', async () => {
   const router = createRouter({ commands: [ask], buttons: [confirm], secret })
   const adapter = fakeAdapter('ask')
 
-  await router.dispatchCommand(adapter, { services: { mark: () => {} } })
+  await router.dispatch(adapter, { services: { mark: () => {} } })
 
   expect(decodeCustomId(customId, secret)).toEqual({
+    componentKind: 'button',
     id: 'confirm',
     params: { userId: '123456789012345678' },
   })
@@ -177,6 +180,7 @@ test('emits a typed button component with signed params', async () => {
 function fakeButtonAdapter(customId: string): ButtonInteractionAdapter & { updated: string[] } {
   const updated: string[] = []
   return {
+    kind: 'button',
     customId,
     updated,
     async update(input) {
