@@ -1,33 +1,14 @@
+[**English**](./README.md) · [한국어](./README.ko.md) · [日本語](./README.ja.md)
+
 # Vivere
 
-A TypeScript framework for building Discord bots that stay readable as they grow.
+Vivere is a TypeScript framework for Discord bots where one slash command lives in one typed file, and the framework handles registration, routing, and execution on top of [discord.js](https://discord.js.org).
 
-**English** · [한국어](./README.ko.md) · [日本語](./README.ja.md)
+It is meant for bots that are written as code. A command defines its name, description, options, and handler in one place. Vivere reads that definition and gives the handler a typed context, so command files stay small without a central switch statement or repeated interaction boilerplate.
 
----
+Vivere is MIT licensed and lives at [github.com/jb0xyz/vivere](https://github.com/jb0xyz/vivere). The package name is `vivere`, but it has not been published to npm yet.
 
-Most Discord bots begin as a single file and slowly turn into a tangle of command
-registrations, option parsing, permission checks, and button handlers. Vivere is an
-effort to keep that from happening. It gives you a small set of typed building blocks
-and a predictable file layout, so a bot with two commands and a bot with two hundred
-are organized the same way.
-
-It is built on top of [discord.js](https://discord.js.org), so you keep the entire
-ecosystem and can always reach for the raw client when you need it.
-
-## Why Vivere
-
-- **Everything is typed.** Declare a command's options once and `ctx.options` is
-  inferred for you — no casts, no guesswork.
-- **A structure you can predict.** A command lives in `src/commands/ping.ts` and
-  becomes `/ping`. Where a file sits tells you what it is.
-- **No hidden magic.** Your bot boots from an entry file you can read top to bottom.
-  File discovery is a convenience, not a requirement — you can register everything
-  explicitly.
-- **Small pieces.** Each command is a self-contained file, so it is easy to find,
-  read, and change.
-
-## A quick look
+## What It Looks Like
 
 ```ts
 // src/commands/ping.ts
@@ -41,6 +22,8 @@ export const pingCommand = defineCommand({
   },
 })
 ```
+
+Start the bot from your own entry file:
 
 ```ts
 // src/index.ts
@@ -61,58 +44,83 @@ const app = createApp({
 await app.start()
 ```
 
-Options are declared inline, and their types flow straight through to `execute`:
+Options are typed from their declaration:
 
 ```ts
-options: {
-  target: opt.user('The member to assign'),
-  silent: opt.boolean('Reply quietly').optional(),
-},
-// inside execute, ctx.options is fully typed:
-//   ctx.options.target → User
-//   ctx.options.silent → boolean | undefined
+import { defineCommand, opt } from '../app/vivere.js'
+
+export const inspectCommand = defineCommand({
+  name: 'inspect',
+  description: 'Shows member information',
+  options: {
+    target: opt.user('The member'),
+    silent: opt.boolean('Reply quietly').optional(),
+  },
+  async execute(ctx) {
+    ctx.options.target
+    ctx.options.silent
+
+    await ctx.reply({
+      content: `Selected ${ctx.options.target.username}`,
+      ephemeral: ctx.options.silent,
+    })
+  },
+})
 ```
 
-## Getting started
+In that handler, `ctx.options.target` is a `User`, and `ctx.options.silent` is `boolean | undefined`.
 
-Vivere is in early development and is not published to npm yet. To try it, clone the
-repository and run the example bot:
+Services are bound once:
 
-```bash
+```ts
+// src/app/vivere.ts
+import { createVivere } from 'vivere'
+import type { ServicesType } from './services.js'
+
+export const vivere = createVivere<ServicesType>()
+
+export const defineCommand = vivere.defineCommand
+export const opt = vivere.opt
+```
+
+Every command created through that file receives the same typed `ctx.services`.
+
+## Run The Example
+
+Vivere is not on npm yet. Run it from the repository:
+
+```sh
 git clone https://github.com/jb0xyz/vivere.git
 cd vivere
 pnpm install
 pnpm --filter vivere build
-
 cd examples/basic-bot
-cp .env.example .env   # add your bot token and a development guild id
+cp .env.example .env
 pnpm start
 ```
 
-Invite the bot to your development server and run `/ping`.
+Fill `.env` with your Discord bot token and development guild ID before starting the example.
 
-## How a bot is laid out
+## Bot Structure
 
+A small bot can be organized like this:
+
+```txt
+src/
+  app/
+    services.ts
+    vivere.ts
+  commands/
+    ping.ts
+  index.ts
 ```
-basic-bot/
-├─ src/
-│  ├─ app/
-│  │  ├─ vivere.ts     # createVivere<Services>() — your typed entry points
-│  │  └─ services.ts   # shared services handed to every command
-│  ├─ commands/
-│  │  └─ ping.ts       # one file per command
-│  └─ index.ts         # createApp(...).start()
-└─ package.json
-```
 
-`createVivere<Services>()` binds your service types once, so every command receives a
-fully typed `ctx.services` without any global wiring.
+Commands are registered by passing them to `createApp({ commands: [...] })`, so the wiring stays visible in one place.
 
 ## Contributing
 
-Issues and pull requests are welcome. See [CONTRIBUTING.md](./CONTRIBUTING.md) for how
-to set up the project and propose changes.
+See [CONTRIBUTING.md](./CONTRIBUTING.md).
 
 ## License
 
-Released under the [MIT License](./LICENSE).
+MIT. See [LICENSE](./LICENSE).
