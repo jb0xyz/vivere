@@ -15,11 +15,12 @@ test('translates a chat-input interaction and routes it', async () => {
       await ctx.reply('Pong!')
     },
   })
-  const router = createRouter([ping])
+  const router = createRouter({ commands: [ping], buttons: [], secret: 'secret' })
   const reply = vi.fn(async () => {})
 
   const fakeInteraction = {
     isChatInputCommand: () => true,
+    isButton: () => false,
     commandName: 'ping',
     reply,
     deferReply: async () => {},
@@ -32,7 +33,7 @@ test('translates a chat-input interaction and routes it', async () => {
 })
 
 test('ignores non-command interactions', async () => {
-  const router = createRouter([])
-  const fake = { isChatInputCommand: () => false }
+  const router = createRouter({ commands: [], buttons: [], secret: 'secret' })
+  const fake = { isChatInputCommand: () => false, isButton: () => false }
   await expect(handleInteraction(fake as never, router, async () => ({}))).resolves.toBeUndefined()
 })

@@ -1,6 +1,7 @@
+import { createHmac } from 'node:crypto'
 import { Client } from 'discord.js'
 import type { ApplicationCommandDataResolvable, GatewayIntentBits } from 'discord.js'
-import type { CommandIR, EventIR } from '../authoring/create-vivere.js'
+import type { ButtonIR, CommandIR, EventIR } from '../authoring/create-vivere.js'
 import { handleInteraction } from '../discord/client.js'
 import { toCommandJSON } from '../discord/to-command-json.js'
 import { registerEvents } from './events.js'
@@ -16,6 +17,7 @@ export interface CreateAppOptions<TServices> {
   config: AppConfig
   createServices: () => Promise<TServices>
   commands: CommandIR<TServices>[]
+  buttons?: ButtonIR<TServices>[]
   events?: EventIR<TServices>[]
 }
 
@@ -24,8 +26,12 @@ export interface App {
 }
 
 export function createApp<TServices>(options: CreateAppOptions<TServices>): App {
-  const { config, createServices, commands, events = [] } = options
-  const router = createRouter(commands)
+  const { config, createServices, commands, buttons = [], events = [] } = options
+  if (!config.token) {
+    throw new Error('createApp: config.token is required (set your bot token, e.g. via DISCORD_TOKEN).')
+  }
+  const secret = createHmac('sha256', config.token).update('vivere:component-custom-id').digest('base64url')
+  const router = createRouter({ commands, buttons, secret })
   const client = new Client({ intents: config.intents })
 
   registerEvents(client, events, createServices)

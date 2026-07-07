@@ -1,7 +1,9 @@
 import type { ClientEvents } from 'discord.js'
-import type { CommandContext, EventContext } from './types.js'
+import type { ButtonContext, CommandContext, EventContext } from './types.js'
 import type { InferOptions, OptionsRecord } from './opt.js'
 import { opt } from './opt.js'
+import type { InferParams, ParamsRecord } from './param.js'
+import { param } from './param.js'
 
 export interface CommandIR<TServices = unknown> {
   readonly kind: 'command'
@@ -31,6 +33,19 @@ export interface EventInput<K extends keyof ClientEvents, TServices> {
   execute(ctx: EventContext<TServices>, ...args: ClientEvents[K]): Promise<void>
 }
 
+export interface ButtonIR<TServices = unknown, TParams extends ParamsRecord = ParamsRecord> {
+  readonly kind: 'button'
+  readonly id: string
+  readonly params: TParams
+  readonly execute: (ctx: ButtonContext<Record<string, unknown>, TServices>) => Promise<void>
+}
+
+export interface ButtonInput<TParams extends ParamsRecord, TServices> {
+  id: string
+  params?: TParams
+  execute(ctx: ButtonContext<InferParams<TParams>, TServices>): Promise<void>
+}
+
 export function createVivere<TServices>() {
   function defineCommand<TOptions extends OptionsRecord = Record<string, never>>(
     input: CommandInput<TOptions, TServices>,
@@ -53,5 +68,18 @@ export function createVivere<TServices>() {
     }
   }
 
-  return { defineCommand, defineEvent, opt }
+  function defineButton<TParams extends ParamsRecord = Record<string, never>>(
+    input: ButtonInput<TParams, TServices>,
+  ): ButtonIR<TServices, TParams> {
+    if (!/^[a-z0-9-]+$/.test(input.id)) throw new Error(`Invalid button id: ${input.id}`)
+
+    return {
+      kind: 'button',
+      id: input.id,
+      params: input.params ?? ({} as TParams),
+      execute: input.execute as ButtonIR<TServices, TParams>['execute'],
+    }
+  }
+
+  return { defineCommand, defineEvent, defineButton, opt, param }
 }

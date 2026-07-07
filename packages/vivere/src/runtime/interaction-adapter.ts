@@ -8,3 +8,10 @@ export interface ChatInputInteractionAdapter {
   reply(input: ReplyInput): Promise<void>
   deferReply(input?: DeferInput): Promise<void>
 }
+
+export interface ButtonInteractionAdapter {
+  readonly customId: string
+  update(input: ReplyInput): Promise<void>
+  reply(input: ReplyInput): Promise<void>
+  deferUpdate(): Promise<void>
+}

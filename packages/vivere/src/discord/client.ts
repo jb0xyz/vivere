@@ -1,8 +1,30 @@
 import { MessageFlags } from 'discord.js'
-import type { ChatInputCommandInteraction, Interaction } from 'discord.js'
+import type { ButtonInteraction, ChatInputCommandInteraction, Interaction } from 'discord.js'
+import type { InteractionReplyOptions, InteractionUpdateOptions } from 'discord.js'
 import type { ReplyInput } from '../authoring/types.js'
-import type { ChatInputInteractionAdapter } from '../runtime/interaction-adapter.js'
+import type { ButtonInteractionAdapter, ChatInputInteractionAdapter } from '../runtime/interaction-adapter.js'
 import type { InteractionRouter } from '../runtime/router.js'
+
+function toInteractionReply(input: ReplyInput): InteractionReplyOptions {
+  if (typeof input === 'string') return { content: input }
+
+  const output: InteractionReplyOptions = {
+    content: input.content,
+  }
+  if (input.ephemeral) output.flags = MessageFlags.Ephemeral
+  if (input.components) output.components = input.components
+  return output
+}
+
+function toInteractionUpdate(input: ReplyInput): InteractionUpdateOptions {
+  if (typeof input === 'string') return { content: input }
+
+  const output: InteractionUpdateOptions = {
+    content: input.content,
+  }
+  if (input.components) output.components = input.components
+  return output
+}
 
 export function toChatInputAdapter(
   interaction: ChatInputCommandInteraction,
@@ -29,17 +51,25 @@ export function toChatInputAdapter(
       }
     },
     async reply(input: ReplyInput) {
-      if (typeof input === 'string') {
-        await interaction.reply({ content: input })
-        return
-      }
-      await interaction.reply({
-        content: input.content,
-        ...(input.ephemeral ? { flags: MessageFlags.Ephemeral } : {}),
-      })
+      await interaction.reply(toInteractionReply(input))
     },
     async deferReply(input) {
       await interaction.deferReply(input?.ephemeral ? { flags: MessageFlags.Ephemeral } : undefined)
+    },
+  }
+}
+
+export function toButtonAdapter(interaction: ButtonInteraction): ButtonInteractionAdapter {
+  return {
+    customId: interaction.customId,
+    async update(input) {
+      await interaction.update(toInteractionUpdate(input))
+    },
+    async reply(input) {
+      await interaction.reply(toInteractionReply(input))
+    },
+    async deferUpdate() {
+      await interaction.deferUpdate()
     },
   }
 }
@@ -49,8 +79,16 @@ export async function handleInteraction<TServices>(
   router: InteractionRouter<TServices>,
   createServices: () => Promise<TServices>,
 ): Promise<void> {
-  if (!interaction.isChatInputCommand()) return
-  const adapter = toChatInputAdapter(interaction)
-  const services = await createServices()
-  await router.dispatch(adapter, { services })
+  if (interaction.isChatInputCommand()) {
+    const adapter = toChatInputAdapter(interaction)
+    const services = await createServices()
+    await router.dispatchCommand(adapter, { services })
+    return
+  }
+
+  if (interaction.isButton()) {
+    const adapter = toButtonAdapter(interaction)
+    const services = await createServices()
+    await router.dispatchButton(adapter, { services })
+  }
 }
