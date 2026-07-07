@@ -2,6 +2,8 @@
 
 # Vivere
 
+[![CI](https://github.com/jb0xyz/vivere/actions/workflows/ci.yml/badge.svg)](https://github.com/jb0xyz/vivere/actions/workflows/ci.yml)
+
 Vivere is a TypeScript framework for Discord bots where one slash command lives in one typed file, and the framework handles registration, routing, and execution on top of [discord.js](https://discord.js.org).
 
 It is meant for bots that are written as code. A command defines its name, description, options, and handler in one place. Vivere reads that definition and gives the handler a typed context, so command files stay small without a central switch statement or repeated interaction boilerplate.

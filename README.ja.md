@@ -2,6 +2,8 @@
 
 # Vivere
 
+[![CI](https://github.com/jb0xyz/vivere/actions/workflows/ci.yml/badge.svg)](https://github.com/jb0xyz/vivere/actions/workflows/ci.yml)
+
 Vivere は、スラッシュコマンドを型付きの 1 ファイルとして書くと、[discord.js](https://discord.js.org) の上で登録、ルーティング、実行を引き受ける TypeScript 製 Discord ボットフレームワークです。
 
 コードでボットを作るプロジェクト向けです。コマンドの名前、説明、オプション、実行処理を同じファイルに置くと、Vivere がその定義を読み取り、型の付いた `ctx` をハンドラーに渡します。大きな switch 文や interaction 処理の繰り返しを書かずに、ボットの構造をファイルとして見通せます。

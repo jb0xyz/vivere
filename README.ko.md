@@ -2,6 +2,8 @@
 
 # Vivere
 
+[![CI](https://github.com/jb0xyz/vivere/actions/workflows/ci.yml/badge.svg)](https://github.com/jb0xyz/vivere/actions/workflows/ci.yml)
+
 Vivere는 슬래시 명령 하나를 타입이 잡힌 파일 하나로 작성하면, [discord.js](https://discord.js.org) 위에서 등록·라우팅·실행을 처리해 주는 TypeScript 디스코드 봇 프레임워크입니다.
 
 코드로 봇을 만드는 프로젝트를 대상으로 합니다. 명령 파일 안에 이름, 설명, 옵션, 실행 함수를 함께 적고, Vivere는 그 정의를 읽어 타입이 잡힌 `ctx`를 넘겨줍니다. 거대한 switch문이나 반복되는 interaction 처리 코드 없이 봇 구조가 파일 구조로 드러납니다.
