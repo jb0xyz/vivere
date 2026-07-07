@@ -9,6 +9,29 @@ export function toChatInputAdapter(
 ): ChatInputInteractionAdapter {
   return {
     commandName: interaction.commandName,
+    getOption(name, kind) {
+      const o = interaction.options
+      switch (kind) {
+        case 'string':
+          return o.getString(name) ?? undefined
+        case 'integer':
+          return o.getInteger(name) ?? undefined
+        case 'number':
+          return o.getNumber(name) ?? undefined
+        case 'boolean':
+          return o.getBoolean(name) ?? undefined
+        case 'user':
+          return o.getUser(name) ?? undefined
+        case 'member':
+          return o.getMember(name) ?? undefined
+        case 'role':
+          return o.getRole(name) ?? undefined
+        case 'attachment':
+          return o.getAttachment(name) ?? undefined
+        default:
+          return undefined
+      }
+    },
     async reply(input: ReplyInput) {
       if (typeof input === 'string') {
         await interaction.reply({ content: input })

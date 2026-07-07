@@ -1,5 +1,5 @@
 import { Client } from 'discord.js'
-import type { GatewayIntentBits } from 'discord.js'
+import type { ApplicationCommandDataResolvable, GatewayIntentBits } from 'discord.js'
 import type { CommandIR } from '../authoring/create-vivere.js'
 import { handleInteraction } from '../discord/client.js'
 import { toCommandJSON } from '../discord/to-command-json.js'
@@ -35,7 +35,10 @@ export function createApp(options: CreateAppOptions): App {
       client.once('ready', (ready) => {
         if (!config.devGuildId) return
         // Register commands to the development guild on startup for fast iteration.
-        void ready.application.commands.set(commands.map(toCommandJSON), config.devGuildId)
+        void ready.application.commands.set(
+          commands.map(toCommandJSON) as ApplicationCommandDataResolvable[],
+          config.devGuildId,
+        )
       })
       await client.login(config.token)
     },
