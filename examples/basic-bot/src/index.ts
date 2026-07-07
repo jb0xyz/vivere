@@ -1,6 +1,7 @@
 import { GatewayIntentBits, createApp } from 'vivere'
 import { createServices } from './app/services.js'
 import { pingCommand } from './commands/ping.js'
+import { readyEvent } from './events/ready.js'
 
 const app = createApp({
   config: {
@@ -10,6 +11,7 @@ const app = createApp({
   },
   createServices,
   commands: [pingCommand],
+  events: [readyEvent],
 })
 
 await app.start()

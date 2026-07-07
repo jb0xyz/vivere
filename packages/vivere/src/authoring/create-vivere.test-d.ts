@@ -1,10 +1,10 @@
-import type { User } from 'discord.js'
+import type { GuildMember, User } from 'discord.js'
 import { expectTypeOf } from 'expect-type'
 import { createVivere } from './create-vivere.js'
 import { createApp } from '../runtime/create-app.js'
 
 type Services = { logger: { info(msg: string): void } }
-const { defineCommand, opt } = createVivere<Services>()
+const { defineCommand, defineEvent, opt } = createVivere<Services>()
 
 const demoCommand = defineCommand({
   name: 'demo',
@@ -18,16 +18,27 @@ const demoCommand = defineCommand({
   },
 })
 
+const joinEvent = defineEvent({
+  name: 'guildMemberAdd',
+  async execute(ctx, member) {
+    expectTypeOf(ctx.services).toEqualTypeOf<Services>()
+    expectTypeOf(member).toEqualTypeOf<GuildMember>()
+    ctx.services.logger.info(member.id)
+  },
+})
+
 createApp({
   config: { token: 'token', intents: [] },
   createServices: async () => ({ logger: { info() {} }, extra: true }),
   commands: [demoCommand],
+  events: [joinEvent],
 })
 
 createApp({
   config: { token: 'token', intents: [] },
   createServices: async () => ({ logger: { info() {} } }),
   commands: [demoCommand],
+  events: [joinEvent],
 })
 
 createApp({
@@ -35,4 +46,13 @@ createApp({
   // @ts-expect-error commands require logger service
   createServices: async () => ({}),
   commands: [demoCommand],
+  events: [joinEvent],
+})
+
+createApp({
+  config: { token: 'token', intents: [] },
+  // @ts-expect-error events require logger service
+  createServices: async () => ({}),
+  commands: [],
+  events: [joinEvent],
 })

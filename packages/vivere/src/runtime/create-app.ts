@@ -1,8 +1,9 @@
 import { Client } from 'discord.js'
 import type { ApplicationCommandDataResolvable, GatewayIntentBits } from 'discord.js'
-import type { CommandIR } from '../authoring/create-vivere.js'
+import type { CommandIR, EventIR } from '../authoring/create-vivere.js'
 import { handleInteraction } from '../discord/client.js'
 import { toCommandJSON } from '../discord/to-command-json.js'
+import { registerEvents } from './events.js'
 import { createRouter } from './router.js'
 
 export interface AppConfig {
@@ -15,6 +16,7 @@ export interface CreateAppOptions<TServices> {
   config: AppConfig
   createServices: () => Promise<TServices>
   commands: CommandIR<TServices>[]
+  events?: EventIR<TServices>[]
 }
 
 export interface App {
@@ -22,9 +24,11 @@ export interface App {
 }
 
 export function createApp<TServices>(options: CreateAppOptions<TServices>): App {
-  const { config, createServices, commands } = options
+  const { config, createServices, commands, events = [] } = options
   const router = createRouter(commands)
   const client = new Client({ intents: config.intents })
+
+  registerEvents(client, events, createServices)
 
   client.on('interactionCreate', (interaction) => {
     void handleInteraction(interaction, router, createServices).catch((error: unknown) => {
