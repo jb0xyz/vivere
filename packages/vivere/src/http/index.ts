@@ -7,6 +7,7 @@ import type {
 import type { AnyMiddlewareDefinition } from '../authoring/middleware.js'
 import type { ErrorReporter } from '../internal/errors.js'
 import { reportError as defaultReportError } from '../internal/errors.js'
+import type { VivereEventSink } from '../internal/observability.js'
 import { createRouter } from '../runtime/router.js'
 import { createStorePorts } from '../stores/memory.js'
 import type { StoreInput } from '../stores/types.js'
@@ -36,6 +37,7 @@ export interface HttpHandlerInput<TServices> {
   createServices?: () => TServices | Promise<TServices>
   stores?: StoreInput
   reportError?: ErrorReporter
+  onEvent?: VivereEventSink
 }
 
 function getHeader(headers: HttpHeaders, name: string): string | undefined {
@@ -94,6 +96,7 @@ export function createHttpHandler<TServices = unknown>(input: HttpHandlerInput<T
     secret: input.customIdSecret ?? randomBytes(32).toString('base64url'),
     stores,
     reportError,
+    onEvent: input.onEvent,
   })
 
   return async (rawBody, headers) => {

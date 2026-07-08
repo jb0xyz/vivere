@@ -20,6 +20,8 @@ import type {
   UserCommandInteractionAdapter,
 } from '../runtime/interaction-adapter.js'
 import { reportError as defaultReportError } from '../internal/errors.js'
+import { getDurationMs, ignoreVivereEvent } from '../internal/observability.js'
+import type { VivereEventSink } from '../internal/observability.js'
 import { runWithMiddleware } from '../runtime/middleware.js'
 import { createRouter } from '../runtime/router.js'
 import { createStorePorts } from '../stores/memory.js'
@@ -44,6 +46,7 @@ export interface CreateTestBotInput<TServices> {
   createServices?: () => TServices | Promise<TServices>
   stores?: StoreInput
   reportError?: ErrorReporter
+  onEvent?: VivereEventSink
 }
 
 export interface TestIdentityInput {
@@ -381,6 +384,7 @@ export function createTestBot<TServices = unknown>(input: CreateTestBotInput<TSe
   const eventList = getEventList(input)
   const createServices = createServicesFactory(input)
   const reportError = input.reportError ?? defaultReportError
+  const onEvent = input.onEvent ?? ignoreVivereEvent
   const stores = createStorePorts(input.stores)
   const router = createRouter({
     commands: commandList,
@@ -389,6 +393,7 @@ export function createTestBot<TServices = unknown>(input: CreateTestBotInput<TSe
     secret: TEST_SECRET,
     stores,
     reportError,
+    onEvent,
   })
 
   async function dispatch(adapter: Parameters<typeof router.dispatch>[0], capture: TestRunResult): Promise<TestRunResult> {
@@ -479,15 +484,24 @@ export function createTestBot<TServices = unknown>(input: CreateTestBotInput<TSe
           await Promise.all(
             eventList
               .filter((event) => String(event.descriptor.name) === name)
-              .map((event) =>
-                runWithMiddleware({
+              .map(async (event) => {
+                const eventName = String(event.descriptor.name)
+                const startedAt = Date.now()
+                onEvent({ type: 'event.started', name: eventName })
+                const result = await runWithMiddleware({
                   ctx: { services, stores, client: {}, userId: 'system' },
                   middleware: [...(input.middleware ?? []), ...event.middleware],
                   execute: (nextCtx) => event.execute(nextCtx, ...args),
                   reportError,
-                  errorContext: { phase: 'event', id: String(event.descriptor.name) },
-                }),
-              ),
+                  errorContext: { phase: 'event', id: eventName },
+                })
+                const durationMs = getDurationMs(startedAt)
+                if (result.outcome === 'error') {
+                  onEvent({ type: 'event.failed', name: eventName, durationMs })
+                  return
+                }
+                onEvent({ type: 'event.handled', name: eventName, durationMs })
+              }),
           )
         },
       }

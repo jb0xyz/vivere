@@ -49,12 +49,14 @@ test('syncs discovered commands to the configured guild', async () => {
   await writeProject()
   const put = vi.fn(async () => ({}))
   const get = vi.fn(async () => ({ id: 'app-1' }))
+  const eventList: unknown[] = []
 
   const result = await runSync({
     cwd: tmpRoot,
     global: false,
     env: { DISCORD_TOKEN: 'token' },
     createRest: () => ({ get, put }),
+    onEvent: (event) => eventList.push(event),
   })
 
   expect(result).toEqual({ commandCount: 1, scope: 'guild' })
@@ -69,6 +71,7 @@ test('syncs discovered commands to the configured guild', async () => {
       },
     ],
   })
+  expect(eventList).toEqual([{ type: 'sync.completed', guildId: 'guild-1', count: 1 }])
 })
 
 test('syncs globally when requested', async () => {

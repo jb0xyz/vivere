@@ -12,6 +12,8 @@ import { runWithMiddleware } from '../runtime/middleware.js'
 import type { ComponentInteractionAdapter } from '../runtime/interaction-adapter.js'
 import { createStorePorts } from '../stores/memory.js'
 import type { StorePorts } from '../stores/types.js'
+import { getDurationMs, ignoreVivereEvent } from '../internal/observability.js'
+import type { VivereEventSink } from '../internal/observability.js'
 import { createComponentsBuilder, createModalSpec } from './component-builder.js'
 import { decodeCustomId } from './custom-id.js'
 
@@ -54,9 +56,11 @@ export async function handleComponent<TServices>(
     components?: ComponentsBuilder
     middleware?: AnyMiddlewareDefinition<TServices>[]
     reportError?: ErrorReporter
+    onEvent?: VivereEventSink
   },
 ): Promise<void> {
   const reportError = options.reportError ?? defaultReportError
+  const onEvent = options.onEvent ?? ignoreVivereEvent
   const stores = options.stores ?? options.deps.stores ?? createStorePorts()
   let decoded: { componentKind: string; id: string; params: Record<string, string> }
   try {
@@ -84,6 +88,8 @@ export async function handleComponent<TServices>(
     })
     return
   }
+  const startedAt = Date.now()
+  onEvent({ type: 'component.started', kind: component.descriptor.componentKind, id: component.descriptor.id })
 
   const params: Record<string, unknown> = {}
   try {
@@ -93,7 +99,16 @@ export async function handleComponent<TServices>(
       params[key] = codec.decode(raw)
     }
   } catch (error) {
+    const durationMs = getDurationMs(startedAt)
     reportError(error, { phase: 'component', kind: component.descriptor.componentKind, id: component.descriptor.id })
+    onEvent({ type: 'component.failed', kind: component.descriptor.componentKind, id: component.descriptor.id, durationMs })
+    onEvent({
+      type: 'component.finished',
+      kind: component.descriptor.componentKind,
+      id: component.descriptor.id,
+      durationMs,
+      outcome: 'error',
+    })
     return
   }
 
@@ -118,13 +133,24 @@ export async function handleComponent<TServices>(
         reply: (input) => adapter.reply(input),
         defer: (input) => adapter.defer(input),
       }
-      await runWithMiddleware({
+      const result = await runWithMiddleware({
         ctx,
         middleware,
         execute: (nextCtx) => component.execute(nextCtx),
         reportError,
         errorContext: { phase: 'component', kind: component.descriptor.componentKind, id: component.descriptor.id },
         replyUserError: (input) => adapter.reply(input),
+      })
+      const durationMs = getDurationMs(startedAt)
+      if (result.outcome === 'error') {
+        onEvent({ type: 'component.failed', kind: component.descriptor.componentKind, id: component.descriptor.id, durationMs })
+      }
+      onEvent({
+        type: 'component.finished',
+        kind: component.descriptor.componentKind,
+        id: component.descriptor.id,
+        durationMs,
+        outcome: result.outcome,
       })
       return
     }
@@ -149,7 +175,7 @@ export async function handleComponent<TServices>(
         ...baseCtx,
         values: adapter.values,
       }
-      await runWithMiddleware({
+      const result = await runWithMiddleware({
         ctx,
         middleware,
         execute: (nextCtx) => component.execute(nextCtx),
@@ -157,10 +183,21 @@ export async function handleComponent<TServices>(
         errorContext: { phase: 'component', kind: component.descriptor.componentKind, id: component.descriptor.id },
         replyUserError: (input) => adapter.reply(input),
       })
+      const durationMs = getDurationMs(startedAt)
+      if (result.outcome === 'error') {
+        onEvent({ type: 'component.failed', kind: component.descriptor.componentKind, id: component.descriptor.id, durationMs })
+      }
+      onEvent({
+        type: 'component.finished',
+        kind: component.descriptor.componentKind,
+        id: component.descriptor.id,
+        durationMs,
+        outcome: result.outcome,
+      })
       return
     }
     if (isButtonDefinition(component)) {
-      await runWithMiddleware({
+      const result = await runWithMiddleware({
         ctx: baseCtx,
         middleware,
         execute: (nextCtx) => component.execute(nextCtx),
@@ -168,8 +205,28 @@ export async function handleComponent<TServices>(
         errorContext: { phase: 'component', kind: component.descriptor.componentKind, id: component.descriptor.id },
         replyUserError: (input) => adapter.reply(input),
       })
+      const durationMs = getDurationMs(startedAt)
+      if (result.outcome === 'error') {
+        onEvent({ type: 'component.failed', kind: component.descriptor.componentKind, id: component.descriptor.id, durationMs })
+      }
+      onEvent({
+        type: 'component.finished',
+        kind: component.descriptor.componentKind,
+        id: component.descriptor.id,
+        durationMs,
+        outcome: result.outcome,
+      })
     }
   } catch (error) {
+    const durationMs = getDurationMs(startedAt)
     reportError(error, { phase: 'component', kind: component.descriptor.componentKind, id: component.descriptor.id })
+    onEvent({ type: 'component.failed', kind: component.descriptor.componentKind, id: component.descriptor.id, durationMs })
+    onEvent({
+      type: 'component.finished',
+      kind: component.descriptor.componentKind,
+      id: component.descriptor.id,
+      durationMs,
+      outcome: 'error',
+    })
   }
 }

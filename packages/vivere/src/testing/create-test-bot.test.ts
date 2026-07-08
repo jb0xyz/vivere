@@ -201,3 +201,87 @@ test('exposes injected stores to handlers through the test bot', async () => {
   expect(kv.get).toHaveBeenCalledWith('seen:user-1')
   expect(result.replies).toEqual([{ content: 'stored' }])
 })
+
+test('captures command observability events', async () => {
+  vi.useFakeTimers()
+  vi.setSystemTime(new Date('2026-01-01T00:00:00.000Z'))
+  const eventList: unknown[] = []
+  const ping = defineCommand({
+    name: 'ping',
+    description: 'Ping',
+    async execute(ctx) {
+      vi.advanceTimersByTime(15)
+      await ctx.reply('Pong!')
+    },
+  })
+  const bot = createTestBot({
+    commands: [ping],
+    services: { logger: { info() {} } },
+    onEvent: (event) => eventList.push(event),
+  })
+
+  await bot.command('ping').run({ options: {} })
+
+  expect(eventList).toEqual([
+    { type: 'command.started', route: 'ping' },
+    { type: 'command.finished', route: 'ping', durationMs: 15, outcome: 'ok' },
+  ])
+  vi.useRealTimers()
+})
+
+test('captures failed command observability events', async () => {
+  const error = new Error('boom')
+  const eventList: unknown[] = []
+  const fail = defineCommand({
+    name: 'fail',
+    description: 'Fail',
+    async execute() {
+      throw error
+    },
+  })
+  const bot = createTestBot({
+    commands: [fail],
+    services: { logger: { info() {} } },
+    reportError: vi.fn(),
+    onEvent: (event) => eventList.push(event),
+  })
+
+  await bot.command('fail').run({ options: {} })
+
+  expect(eventList).toEqual([
+    { type: 'command.started', route: 'fail' },
+    { type: 'command.failed', route: 'fail', durationMs: 0 },
+    { type: 'command.finished', route: 'fail', durationMs: 0, outcome: 'error' },
+  ])
+})
+
+test('captures component and event observability events', async () => {
+  const eventList: unknown[] = []
+  const confirm = defineButton({
+    id: 'confirm',
+    params: { userId: param.snowflake() },
+    async execute(ctx) {
+      await ctx.update({ content: ctx.params.userId })
+    },
+  })
+  const ready = defineEvent({
+    name: 'ready',
+    async execute() {},
+  })
+  const bot = createTestBot({
+    components: [confirm],
+    events: [ready],
+    services: { logger: { info() {} } },
+    onEvent: (event) => eventList.push(event),
+  })
+
+  await bot.button('confirm', { params: { userId: '123456789012345678' } }).run()
+  await bot.event('ready').emit()
+
+  expect(eventList).toEqual([
+    { type: 'component.started', kind: 'button', id: 'confirm' },
+    { type: 'component.finished', kind: 'button', id: 'confirm', durationMs: 0, outcome: 'ok' },
+    { type: 'event.started', name: 'ready' },
+    { type: 'event.handled', name: 'ready', durationMs: 0 },
+  ])
+})

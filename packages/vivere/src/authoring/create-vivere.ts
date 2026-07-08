@@ -189,6 +189,8 @@ export interface PluginDefinition<TServices = unknown> {
   readonly commands: ApplicationCommandDefinition<TServices>[]
   readonly events: EventDefinition<TServices>[]
   readonly components: ComponentDefinition<TServices>[]
+  readonly setup?: () => Promise<void> | void
+  readonly dispose?: () => Promise<void> | void
 }
 
 export interface PluginInput<TServices> {
@@ -196,6 +198,8 @@ export interface PluginInput<TServices> {
   commands?: ApplicationCommandDefinition<TServices>[]
   events?: EventDefinition<TServices>[]
   components?: ComponentDefinition<TServices>[]
+  setup?: () => Promise<void> | void
+  dispose?: () => Promise<void> | void
 }
 
 function createOptionDescriptors<TServices>(options: OptionsRecord<TServices>): OptionDescriptor[] {
@@ -438,6 +442,8 @@ export function createVivere<TServices>() {
       commands: input.commands ?? [],
       events: input.events ?? [],
       components: input.components ?? [],
+      ...(input.setup ? { setup: input.setup } : {}),
+      ...(input.dispose ? { dispose: input.dispose } : {}),
     }
   }
 

@@ -97,6 +97,7 @@ export type {
   AppDiscoveryConfig,
   CreateAppOptions,
 } from './runtime/create-app.js'
+export type { ServiceFactory, ServiceFactoryResult, ServiceScope } from './runtime/lifecycle.js'
 export { createMemoryKeyValueStore, createMemoryRateLimitStore } from './stores/memory.js'
 export type {
   KeyValueSetOptions,
@@ -107,4 +108,5 @@ export type {
   StorePorts,
 } from './stores/types.js'
 export type { ErrorContext, ErrorPhase, ErrorReporter } from './internal/errors.js'
+export type { InteractionOutcome, VivereEvent, VivereEventSink } from './internal/observability.js'
 export { GatewayIntentBits } from 'discord.js'

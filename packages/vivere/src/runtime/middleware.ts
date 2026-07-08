@@ -2,6 +2,7 @@ import type { AnyMiddlewareDefinition, MiddlewareContext } from '../authoring/mi
 import { VivereUserError } from '../authoring/middleware.js'
 import type { ReplyInput } from '../authoring/types.js'
 import type { ErrorContext, ErrorReporter } from '../internal/errors.js'
+import type { InteractionOutcome } from '../internal/observability.js'
 
 export interface RunMiddlewareInput<TContext extends MiddlewareContext> {
   ctx: TContext
@@ -10,6 +11,10 @@ export interface RunMiddlewareInput<TContext extends MiddlewareContext> {
   reportError: ErrorReporter
   errorContext: ErrorContext
   replyUserError?: (input: ReplyInput) => Promise<void>
+}
+
+export interface RunMiddlewareResult {
+  outcome: InteractionOutcome
 }
 
 async function handleMiddlewareError<TContext extends MiddlewareContext>(
@@ -38,7 +43,7 @@ async function handleMiddlewareError<TContext extends MiddlewareContext>(
 
 export async function runWithMiddleware<TContext extends MiddlewareContext>(
   input: RunMiddlewareInput<TContext>,
-): Promise<void> {
+): Promise<RunMiddlewareResult> {
   let ctx = input.ctx as TContext & Record<string, unknown>
 
   try {
@@ -53,7 +58,7 @@ export async function runWithMiddleware<TContext extends MiddlewareContext>(
         ctx = { ...ctx, ...nextExtension }
         return nextExtension
       })
-      if (!canContinue) return
+      if (!canContinue) return { outcome: 'blocked' }
     }
 
     const result = await input.execute(ctx)
@@ -61,7 +66,9 @@ export async function runWithMiddleware<TContext extends MiddlewareContext>(
     for (const middleware of input.middleware) {
       if (middleware.after) await middleware.after(ctx, result)
     }
+    return { outcome: 'ok' }
   } catch (error) {
     await handleMiddlewareError(error, ctx, input)
+    return { outcome: 'error' }
   }
 }

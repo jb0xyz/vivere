@@ -17,6 +17,8 @@ import type { ErrorReporter } from '../internal/errors.js'
 import { reportError as defaultReportError } from '../internal/errors.js'
 import { createStorePorts } from '../stores/memory.js'
 import type { StorePorts } from '../stores/types.js'
+import { getDurationMs, ignoreVivereEvent } from '../internal/observability.js'
+import type { VivereEventSink } from '../internal/observability.js'
 import { runWithMiddleware } from './middleware.js'
 import type {
   AutocompleteInteractionAdapter,
@@ -39,6 +41,7 @@ export interface CreateRouterOptions<TServices> {
   secret: string
   stores?: StorePorts
   reportError?: ErrorReporter
+  onEvent?: VivereEventSink
 }
 
 export interface InteractionRouter<TServices = unknown> {
@@ -70,6 +73,7 @@ export function createRouter<TServices>(options: CreateRouterOptions<TServices>)
   const reportError = options.reportError ?? defaultReportError
   const globalMiddleware = options.middleware ?? []
   const stores = options.stores ?? createStorePorts()
+  const onEvent = options.onEvent ?? ignoreVivereEvent
 
   function getMiddleware(definition: { middleware?: AnyMiddlewareDefinition<TServices>[] }) {
     return [...globalMiddleware, ...(definition.middleware ?? [])]
@@ -88,32 +92,45 @@ export function createRouter<TServices>(options: CreateRouterOptions<TServices>)
 
   async function dispatchCommand(adapter: ChatInputInteractionAdapter, deps: DispatchDeps<TServices>): Promise<void> {
     const route = adapter.route.length > 0 ? adapter.route : [adapter.commandName]
+    const routeKey = route.join('/')
     const command = commandRegistry.get(route.join('/'))
     if (!command?.execute) return
+    const startedAt = Date.now()
+    onEvent({ type: 'command.started', route: routeKey })
 
-    const resolvedOptions: Record<string, unknown> = {}
-    for (const option of command.descriptor.options) {
-      resolvedOptions[option.property] = adapter.getOption(option.name, option.kind, option.required)
-    }
+    try {
+      const resolvedOptions: Record<string, unknown> = {}
+      for (const option of command.descriptor.options) {
+        resolvedOptions[option.property] = adapter.getOption(option.name, option.kind, option.required)
+      }
 
-    const ctx: CommandContext<Record<string, unknown>, TServices> = {
-      options: resolvedOptions,
-      services: deps.services,
-      stores: getStores(deps),
-      ...getIdentity(adapter),
-      components,
-      reply: (input) => adapter.reply(input),
-      defer: (input) => adapter.deferReply(input),
-      showModal: (modal, input) => adapter.showModal(createModalSpec(options.secret, modal, input)),
+      const ctx: CommandContext<Record<string, unknown>, TServices> = {
+        options: resolvedOptions,
+        services: deps.services,
+        stores: getStores(deps),
+        ...getIdentity(adapter),
+        components,
+        reply: (input) => adapter.reply(input),
+        defer: (input) => adapter.deferReply(input),
+        showModal: (modal, input) => adapter.showModal(createModalSpec(options.secret, modal, input)),
+      }
+      const result = await runWithMiddleware({
+        ctx,
+        middleware: getMiddleware(command),
+        execute: (nextCtx) => command.execute?.(nextCtx) ?? Promise.resolve(),
+        reportError,
+        errorContext: { phase: 'command', id: routeKey },
+        replyUserError: (input) => adapter.reply(input),
+      })
+      const durationMs = getDurationMs(startedAt)
+      if (result.outcome === 'error') onEvent({ type: 'command.failed', route: routeKey, durationMs })
+      onEvent({ type: 'command.finished', route: routeKey, durationMs, outcome: result.outcome })
+    } catch (error) {
+      const durationMs = getDurationMs(startedAt)
+      onEvent({ type: 'command.failed', route: routeKey, durationMs })
+      onEvent({ type: 'command.finished', route: routeKey, durationMs, outcome: 'error' })
+      throw error
     }
-    await runWithMiddleware({
-      ctx,
-      middleware: getMiddleware(command),
-      execute: (nextCtx) => command.execute?.(nextCtx) ?? Promise.resolve(),
-      reportError,
-      errorContext: { phase: 'command', id: route.join('/') },
-      replyUserError: (input) => adapter.reply(input),
-    })
   }
 
   async function dispatchAutocomplete(
@@ -121,6 +138,7 @@ export function createRouter<TServices>(options: CreateRouterOptions<TServices>)
     deps: DispatchDeps<TServices>,
   ): Promise<void> {
     const route = adapter.route.length > 0 ? adapter.route : [adapter.commandName]
+    const routeKey = route.join('/')
     const command = commandRegistry.get(route.join('/'))
     const resolver = command?.autocomplete[adapter.focusedName]
     if (!resolver) {
@@ -140,7 +158,7 @@ export function createRouter<TServices>(options: CreateRouterOptions<TServices>)
       )
       await adapter.respond(choices)
     } catch (error) {
-      reportError(error, { phase: 'command', id: route.join('/') })
+      reportError(error, { phase: 'command', id: routeKey })
       await adapter.respond([])
     }
   }
@@ -151,24 +169,37 @@ export function createRouter<TServices>(options: CreateRouterOptions<TServices>)
   ): Promise<void> {
     const command = userCommandRegistry.get(`userCommand:${adapter.commandName}`)
     if (!command) return
+    const startedAt = Date.now()
+    const route = adapter.commandName
+    onEvent({ type: 'command.started', route })
 
-    const ctx: UserCommandContext<TServices> = {
-      services: deps.services,
-      stores: getStores(deps),
-      targetUser: adapter.targetUser,
-      ...getIdentity(adapter),
-      reply: (input) => adapter.reply(input),
-      defer: (input) => adapter.deferReply(input),
+    try {
+      const ctx: UserCommandContext<TServices> = {
+        services: deps.services,
+        stores: getStores(deps),
+        targetUser: adapter.targetUser,
+        ...getIdentity(adapter),
+        reply: (input) => adapter.reply(input),
+        defer: (input) => adapter.deferReply(input),
+      }
+
+      const result = await runWithMiddleware({
+        ctx,
+        middleware: getMiddleware(command),
+        execute: (nextCtx) => command.execute(nextCtx),
+        reportError,
+        errorContext: { phase: 'command', kind: 'userCommand', id: adapter.commandName },
+        replyUserError: (input) => adapter.reply(input),
+      })
+      const durationMs = getDurationMs(startedAt)
+      if (result.outcome === 'error') onEvent({ type: 'command.failed', route, durationMs })
+      onEvent({ type: 'command.finished', route, durationMs, outcome: result.outcome })
+    } catch (error) {
+      const durationMs = getDurationMs(startedAt)
+      onEvent({ type: 'command.failed', route, durationMs })
+      onEvent({ type: 'command.finished', route, durationMs, outcome: 'error' })
+      throw error
     }
-
-    await runWithMiddleware({
-      ctx,
-      middleware: getMiddleware(command),
-      execute: (nextCtx) => command.execute(nextCtx),
-      reportError,
-      errorContext: { phase: 'command', kind: 'userCommand', id: adapter.commandName },
-      replyUserError: (input) => adapter.reply(input),
-    })
   }
 
   async function dispatchMessageCommand(
@@ -177,24 +208,37 @@ export function createRouter<TServices>(options: CreateRouterOptions<TServices>)
   ): Promise<void> {
     const command = messageCommandRegistry.get(`messageCommand:${adapter.commandName}`)
     if (!command) return
+    const startedAt = Date.now()
+    const route = adapter.commandName
+    onEvent({ type: 'command.started', route })
 
-    const ctx: MessageCommandContext<TServices> = {
-      services: deps.services,
-      stores: getStores(deps),
-      targetMessage: adapter.targetMessage,
-      ...getIdentity(adapter),
-      reply: (input) => adapter.reply(input),
-      defer: (input) => adapter.deferReply(input),
+    try {
+      const ctx: MessageCommandContext<TServices> = {
+        services: deps.services,
+        stores: getStores(deps),
+        targetMessage: adapter.targetMessage,
+        ...getIdentity(adapter),
+        reply: (input) => adapter.reply(input),
+        defer: (input) => adapter.deferReply(input),
+      }
+
+      const result = await runWithMiddleware({
+        ctx,
+        middleware: getMiddleware(command),
+        execute: (nextCtx) => command.execute(nextCtx),
+        reportError,
+        errorContext: { phase: 'command', kind: 'messageCommand', id: adapter.commandName },
+        replyUserError: (input) => adapter.reply(input),
+      })
+      const durationMs = getDurationMs(startedAt)
+      if (result.outcome === 'error') onEvent({ type: 'command.failed', route, durationMs })
+      onEvent({ type: 'command.finished', route, durationMs, outcome: result.outcome })
+    } catch (error) {
+      const durationMs = getDurationMs(startedAt)
+      onEvent({ type: 'command.failed', route, durationMs })
+      onEvent({ type: 'command.finished', route, durationMs, outcome: 'error' })
+      throw error
     }
-
-    await runWithMiddleware({
-      ctx,
-      middleware: getMiddleware(command),
-      execute: (nextCtx) => command.execute(nextCtx),
-      reportError,
-      errorContext: { phase: 'command', kind: 'messageCommand', id: adapter.commandName },
-      replyUserError: (input) => adapter.reply(input),
-    })
   }
 
   return {
@@ -223,6 +267,7 @@ export function createRouter<TServices>(options: CreateRouterOptions<TServices>)
             components,
             middleware: globalMiddleware,
             reportError,
+            onEvent,
           })
       }
     },

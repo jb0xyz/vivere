@@ -60,7 +60,11 @@ import type {
   SelectSpec,
   StoreInput,
   StorePorts,
+  ServiceFactoryResult,
+  ServiceScope,
   VivereConfig,
+  VivereEvent,
+  VivereEventSink,
 } from './index.js'
 
 expectTypeOf(createVivere).toBeFunction()
@@ -123,7 +127,11 @@ export type PublicTypes = [
   SelectSpec,
   StoreInput,
   StorePorts,
+  ServiceFactoryResult<unknown>,
+  ServiceScope<unknown>,
   VivereConfig,
+  VivereEvent,
+  VivereEventSink,
 ]
 
 // @ts-expect-error internal

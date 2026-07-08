@@ -15,9 +15,13 @@ import { handleInteraction } from '../discord/gateway-adapter.js'
 import { buildCommandTree } from '../discord/to-command-json.js'
 import type { ErrorReporter } from '../internal/errors.js'
 import { reportError as defaultReportError } from '../internal/errors.js'
+import { ignoreVivereEvent } from '../internal/observability.js'
+import type { VivereEventSink } from '../internal/observability.js'
 import { createStorePorts } from '../stores/memory.js'
 import type { StoreInput } from '../stores/types.js'
 import { registerEvents } from './events.js'
+import { createServiceLifecycle } from './lifecycle.js'
+import type { ServiceFactory } from './lifecycle.js'
 import { createRouter } from './router.js'
 
 export interface AppConfig {
@@ -30,7 +34,7 @@ export type AppDiscoveryConfig = ProjectDiscoveryConfig
 
 export interface CreateAppOptions<TServices> {
   config: AppConfig
-  createServices: () => Promise<TServices>
+  createServices: ServiceFactory<TServices>
   commands?: ApplicationCommandDefinition<TServices>[]
   buttons?: ButtonDefinition<TServices>[]
   components?: ComponentDefinition<TServices>[]
@@ -40,6 +44,7 @@ export interface CreateAppOptions<TServices> {
   middleware?: AnyMiddlewareDefinition<TServices>[]
   stores?: StoreInput
   onError?: ErrorReporter
+  onEvent?: VivereEventSink
 }
 
 export interface ResolveDefinitionsInput<TServices> {
@@ -61,6 +66,7 @@ export interface ResolvedDefinitions<TServices> {
 
 export interface App {
   start(): Promise<void>
+  stop(): Promise<void>
 }
 
 export function createAppErrorReporter(input: { onError?: ErrorReporter }): ErrorReporter {
@@ -93,10 +99,17 @@ export function createApp<TServices>(options: CreateAppOptions<TServices>): App 
   const secret = createHmac('sha256', config.token).update('vivere:component-custom-id').digest('base64url')
   const client = new Client({ intents: config.intents })
   const reportError = createAppErrorReporter({ onError: options.onError })
+  const onEvent = options.onEvent ?? ignoreVivereEvent
   const stores = createStorePorts(options.stores)
+  const services = createServiceLifecycle(createServices)
+  const setupPluginList: PluginDefinition<TServices>[] = []
 
   return {
     async start() {
+      for (const plugin of options.plugins ?? []) {
+        await plugin.setup?.()
+        setupPluginList.push(plugin)
+      }
       const definitions = await resolveDefinitions({
         cwd: process.cwd(),
         commands: options.commands,
@@ -114,10 +127,11 @@ export function createApp<TServices>(options: CreateAppOptions<TServices>): App 
         secret,
         stores,
         reportError,
+        onEvent,
       })
-      registerEvents(client, definitions.events, createServices, reportError, options.middleware, stores)
+      registerEvents(client, definitions.events, services.createServices, reportError, options.middleware, stores, onEvent)
       client.on('interactionCreate', (interaction) => {
-        void handleInteraction(interaction, router, createServices, stores).catch((error: unknown) => {
+        void handleInteraction(interaction, router, services.createServices, stores).catch((error: unknown) => {
           reportError(error, {
             phase:
               interaction.isButton() || interaction.isStringSelectMenu() || interaction.isModalSubmit()
@@ -133,18 +147,27 @@ export function createApp<TServices>(options: CreateAppOptions<TServices>): App 
             return
           }
 
+          const commands = buildCommandTree(definitions.commands.map((command) => command.descriptor))
           ready.application.commands
-            .set(
-              buildCommandTree(definitions.commands.map((command) => command.descriptor)),
-              config.devGuildId,
-            )
-            .then(() => resolve())
+            .set(commands, config.devGuildId)
+            .then(() => {
+              onEvent({ type: 'sync.completed', guildId: config.devGuildId, count: commands.length })
+              resolve()
+            })
             .catch((error: unknown) => reject(error))
         })
       })
 
       await client.login(config.token)
       await readyPromise
+    },
+    async stop() {
+      for (const plugin of [...setupPluginList].reverse()) {
+        await plugin.dispose?.()
+      }
+      setupPluginList.length = 0
+      await services.dispose()
+      client.destroy()
     },
   }
 }

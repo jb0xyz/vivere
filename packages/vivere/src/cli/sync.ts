@@ -6,6 +6,7 @@ import type { RESTPostAPIApplicationCommandsJSONBody } from 'discord.js'
 import type { VivereConfig } from '../config/define-config.js'
 import { resolveProjectDefinitions } from '../discovery/project-definitions.js'
 import { buildCommandTree } from '../discord/to-command-json.js'
+import type { VivereEventSink } from '../internal/observability.js'
 
 export interface SyncRestClient {
   get(route: string): Promise<unknown>
@@ -17,6 +18,7 @@ export interface RunSyncInput {
   global: boolean
   env?: Record<string, string | undefined>
   createRest?: (token: string) => SyncRestClient
+  onEvent?: VivereEventSink
 }
 
 export interface RunSyncResult {
@@ -65,5 +67,6 @@ export async function runSync(input: RunSyncInput): Promise<RunSyncResult> {
     : Routes.applicationGuildCommands(applicationId, config.devGuildId ?? '')
 
   await rest.put(route, { body: commands })
+  input.onEvent?.({ type: 'sync.completed', ...(input.global ? {} : { guildId: config.devGuildId }), count: commands.length })
   return { commandCount: commands.length, scope: input.global ? 'global' : 'guild' }
 }
