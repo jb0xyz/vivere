@@ -130,9 +130,26 @@ test('dispatches a button with decoded params', async () => {
   expect(adapter.updated).toEqual(['confirmed'])
 })
 
+test('reports rejected command handlers with command context', async () => {
+  const error = new Error('command failed')
+  const reportError = vi.fn()
+  const fail = defineCommand({
+    name: 'fail',
+    description: 'fail',
+    async execute() {
+      throw error
+    },
+  })
+  const router = createRouter({ commands: [fail], buttons: [], secret, reportError })
+
+  await router.dispatch(fakeAdapter('fail'), { services: { mark: () => {} } })
+
+  expect(reportError).toHaveBeenCalledWith(error, { phase: 'command', id: 'fail' })
+})
+
 test('ignores unknown or invalid button custom ids', async () => {
-  const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
-  const router = createRouter({ commands: [], buttons: [], secret })
+  const reportError = vi.fn()
+  const router = createRouter({ commands: [], buttons: [], secret, reportError })
 
   await router.dispatch(fakeButtonAdapter(encodeCustomId('button', 'missing', {}, secret)), {
     services: { mark: () => {} },
@@ -141,8 +158,17 @@ test('ignores unknown or invalid button custom ids', async () => {
     services: { mark: () => {} },
   })
 
-  expect(warn).toHaveBeenCalledTimes(2)
-  warn.mockRestore()
+  expect(reportError).toHaveBeenCalledTimes(2)
+  expect(reportError).toHaveBeenNthCalledWith(
+    1,
+    'Unknown component customId: button:missing',
+    { phase: 'component', kind: 'button', id: 'missing' },
+  )
+  expect(reportError).toHaveBeenNthCalledWith(
+    2,
+    expect.any(Error),
+    { phase: 'component', kind: 'button' },
+  )
 })
 
 test('emits a typed button component with signed params', async () => {

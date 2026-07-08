@@ -50,7 +50,7 @@ test('calls event execute with services, client, and payload args', async () => 
 
 test('catches rejected event handlers at the boundary', async () => {
   const error = new Error('event failed')
-  const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {})
+  const reportError = vi.fn()
   const event = defineEvent({
     name: 'ready',
     async execute() {
@@ -59,9 +59,7 @@ test('catches rejected event handlers at the boundary', async () => {
   })
   const { client, listenerByKey } = createMockClient()
 
-  registerEvents(client, [event], async () => ({ marker: 'service' }))
+  registerEvents(client, [event], async () => ({ marker: 'service' }), reportError)
   listenerByKey.get('on:ready')?.()
-  await vi.waitFor(() => expect(consoleError).toHaveBeenCalledWith(error))
-
-  consoleError.mockRestore()
+  await vi.waitFor(() => expect(reportError).toHaveBeenCalledWith(error, { phase: 'event', id: 'ready' }))
 })

@@ -6,6 +6,7 @@ import type { ProjectDiscoveryConfig } from '../discovery/project-definitions.js
 import { resolveProjectDefinitions } from '../discovery/project-definitions.js'
 import { handleInteraction } from '../discord/gateway-adapter.js'
 import { toCommandJSON } from '../discord/to-command-json.js'
+import { reportError } from '../internal/errors.js'
 import { registerEvents } from './events.js'
 import { createRouter } from './router.js'
 
@@ -81,12 +82,12 @@ export function createApp<TServices>(options: CreateAppOptions<TServices>): App 
         commands: definitions.commands,
         buttons: definitions.buttons,
         secret,
+        reportError,
       })
-      registerEvents(client, definitions.events, createServices)
+      registerEvents(client, definitions.events, createServices, reportError)
       client.on('interactionCreate', (interaction) => {
         void handleInteraction(interaction, router, createServices).catch((error: unknown) => {
-          // Route this through app-level onError when that API exists.
-          console.error(error)
+          reportError(error, { phase: interaction.isButton() ? 'component' : 'command' })
         })
       })
       const readyPromise = new Promise<void>((resolve, reject) => {

@@ -43,21 +43,28 @@ test('handles signed component custom ids through the component registry', async
 })
 
 test('ignores invalid or unknown component custom ids', async () => {
-  const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
+  const reportError = vi.fn()
 
   await handleComponent(fakeButtonAdapter('c1:button:confirm:userId=123456789012345678:bad-signature'), {
     registry: new Map(),
     secret,
     deps: { services: { mark: () => {} } },
+    reportError,
   })
   await handleComponent(fakeButtonAdapter(encodeCustomId('button', 'missing', {}, secret)), {
     registry: new Map(),
     secret,
     deps: { services: { mark: () => {} } },
+    reportError,
   })
 
-  expect(warn).toHaveBeenCalledTimes(2)
-  warn.mockRestore()
+  expect(reportError).toHaveBeenCalledTimes(2)
+  expect(reportError).toHaveBeenNthCalledWith(1, expect.any(Error), { phase: 'component', kind: 'button' })
+  expect(reportError).toHaveBeenNthCalledWith(
+    2,
+    'Unknown component customId: button:missing',
+    { phase: 'component', kind: 'button', id: 'missing' },
+  )
 })
 
 function fakeButtonAdapter(customId: string) {

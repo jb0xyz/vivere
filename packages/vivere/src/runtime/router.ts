@@ -4,6 +4,8 @@ import type { ComponentRegistry } from '../components/component-handler.js'
 import { getComponentRegistryKey, handleComponent } from '../components/component-handler.js'
 import { createComponentsBuilder } from '../components/component-builder.js'
 import { createRegistry } from '../internal/collections.js'
+import type { ErrorReporter } from '../internal/errors.js'
+import { reportError as defaultReportError } from '../internal/errors.js'
 import type { ChatInputInteractionAdapter, InteractionAdapter } from './interaction-adapter.js'
 
 export interface DispatchDeps<TServices> {
@@ -14,6 +16,7 @@ export interface CreateRouterOptions<TServices> {
   commands: CommandDefinition<TServices>[]
   buttons: ButtonDefinition<TServices>[]
   secret: string
+  reportError?: ErrorReporter
 }
 
 export interface InteractionRouter<TServices = unknown> {
@@ -26,6 +29,7 @@ export function createRouter<TServices>(options: CreateRouterOptions<TServices>)
     getComponentRegistryKey(button.descriptor.componentKind, button.descriptor.id),
   )
   const components = createComponentsBuilder(options.secret)
+  const reportError = options.reportError ?? defaultReportError
 
   async function dispatchCommand(adapter: ChatInputInteractionAdapter, deps: DispatchDeps<TServices>): Promise<void> {
     const command = commandRegistry.get(adapter.commandName)
@@ -43,7 +47,11 @@ export function createRouter<TServices>(options: CreateRouterOptions<TServices>)
       reply: (input) => adapter.reply(input),
       defer: (input) => adapter.deferReply(input),
     }
-    await command.execute(ctx)
+    try {
+      await command.execute(ctx)
+    } catch (error) {
+      reportError(error, { phase: 'command', id: adapter.commandName })
+    }
   }
 
   return {
@@ -58,6 +66,7 @@ export function createRouter<TServices>(options: CreateRouterOptions<TServices>)
             secret: options.secret,
             deps,
             components,
+            reportError,
           })
       }
     },
