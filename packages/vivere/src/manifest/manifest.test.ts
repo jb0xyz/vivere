@@ -6,6 +6,7 @@ const {
   defineButton,
   defineCommand,
   defineEvent,
+  defineMiddleware,
   defineMessageCommand,
   defineModal,
   defineSelect,
@@ -16,9 +17,12 @@ const {
 } = createVivere()
 
 test('builds deterministic manifests without function fields', () => {
+  const auditMiddleware = defineMiddleware({ name: 'audit' })
+  const globalMiddleware = defineMiddleware({ name: 'global-log' })
   const askCommand = defineCommand({
     name: 'ask',
     description: 'Ask',
+    use: [auditMiddleware],
     options: {
       targetUser: opt.user('target'),
       query: opt.string('query').autocomplete(async () => []),
@@ -37,6 +41,7 @@ test('builds deterministic manifests without function fields', () => {
   const confirmButton = defineButton({
     id: 'confirm',
     params: { userId: param.snowflake(), mode: param.enum(['yes', 'no'] as const) },
+    use: [auditMiddleware],
     async execute() {},
   })
   const cancelButton = defineButton({ id: 'cancel', async execute() {} })
@@ -59,17 +64,20 @@ test('builds deterministic manifests without function fields', () => {
     commands: [pingCommand.descriptor, askCommand.descriptor, userInfoCommand.descriptor, reportCommand.descriptor],
     events: [readyEvent.descriptor, joinEvent.descriptor],
     components: [confirmButton.descriptor, cancelButton.descriptor, pickRoleSelect.descriptor, feedbackModal.descriptor],
+    middleware: [globalMiddleware.descriptor],
   })
   const json = manifestToJson(manifest)
 
   expect(manifest).toEqual({
     schemaVersion: 1,
+    middleware: [{ name: 'global-log' }],
     commands: [
       {
         kind: 'command',
         name: 'ask',
         description: 'Ask',
         route: ['ask'],
+        middleware: ['audit'],
         options: [
           {
             property: 'query',
@@ -102,6 +110,7 @@ test('builds deterministic manifests without function fields', () => {
         kind: 'button',
         componentKind: 'button',
         id: 'confirm',
+        middleware: ['audit'],
         params: [
           { name: 'mode', kind: 'enum', values: ['yes', 'no'] },
           { name: 'userId', kind: 'snowflake' },
@@ -126,6 +135,7 @@ test('builds deterministic manifests without function fields', () => {
         commands: [askCommand.descriptor, reportCommand.descriptor, pingCommand.descriptor, userInfoCommand.descriptor],
         events: [joinEvent.descriptor, readyEvent.descriptor],
         components: [pickRoleSelect.descriptor, cancelButton.descriptor, feedbackModal.descriptor, confirmButton.descriptor],
+        middleware: [globalMiddleware.descriptor],
       }),
     ),
   ).toBe(json)

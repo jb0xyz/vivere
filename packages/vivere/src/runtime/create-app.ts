@@ -8,6 +8,7 @@ import type {
   EventDefinition,
   PluginDefinition,
 } from '../authoring/create-vivere.js'
+import type { AnyMiddlewareDefinition } from '../authoring/middleware.js'
 import type { ProjectDiscoveryConfig } from '../discovery/project-definitions.js'
 import { resolveProjectDefinitions } from '../discovery/project-definitions.js'
 import { handleInteraction } from '../discord/gateway-adapter.js'
@@ -34,6 +35,7 @@ export interface CreateAppOptions<TServices> {
   events?: EventDefinition<TServices>[]
   plugins?: PluginDefinition<TServices>[]
   discover?: AppDiscoveryConfig
+  middleware?: AnyMiddlewareDefinition<TServices>[]
   onError?: ErrorReporter
 }
 
@@ -104,10 +106,11 @@ export function createApp<TServices>(options: CreateAppOptions<TServices>): App 
         commands: definitions.commands,
         buttons: definitions.buttons,
         components: definitions.components,
+        middleware: options.middleware,
         secret,
         reportError,
       })
-      registerEvents(client, definitions.events, createServices, reportError)
+      registerEvents(client, definitions.events, createServices, reportError, options.middleware)
       client.on('interactionCreate', (interaction) => {
         void handleInteraction(interaction, router, createServices).catch((error: unknown) => {
           reportError(error, {

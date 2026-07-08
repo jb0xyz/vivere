@@ -6,6 +6,7 @@ export const {
   defineButton,
   defineCommand,
   defineEvent,
+  defineMiddleware,
   defineModal,
   definePlugin,
   defineSelect,

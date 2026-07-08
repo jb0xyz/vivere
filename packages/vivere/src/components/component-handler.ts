@@ -4,9 +4,11 @@ import type {
   ModalDefinition,
   SelectDefinition,
 } from '../authoring/create-vivere.js'
+import type { AnyMiddlewareDefinition } from '../authoring/middleware.js'
 import type { ButtonContext, ComponentsBuilder, ModalContext, SelectContext } from '../authoring/types.js'
 import type { ErrorReporter } from '../internal/errors.js'
 import { reportError as defaultReportError } from '../internal/errors.js'
+import { runWithMiddleware } from '../runtime/middleware.js'
 import type { ComponentInteractionAdapter } from '../runtime/interaction-adapter.js'
 import { createComponentsBuilder, createModalSpec } from './component-builder.js'
 import { decodeCustomId } from './custom-id.js'
@@ -46,6 +48,7 @@ export async function handleComponent<TServices>(
     secret: string
     deps: ComponentHandlerDeps<TServices>
     components?: ComponentsBuilder
+    middleware?: AnyMiddlewareDefinition<TServices>[]
     reportError?: ErrorReporter
   },
 ): Promise<void> {
@@ -90,6 +93,12 @@ export async function handleComponent<TServices>(
   }
 
   try {
+    const middleware = [...(options.middleware ?? []), ...(component.middleware ?? [])]
+    const identity = {
+      userId: adapter.userId ?? 'unknown',
+      ...(adapter.guildId ? { guildId: adapter.guildId } : {}),
+    }
+
     if (isModalDefinition(component)) {
       if (adapter.kind !== 'modal') return
       const fields = Object.fromEntries(
@@ -99,10 +108,18 @@ export async function handleComponent<TServices>(
         params,
         fields,
         services: options.deps.services,
+        ...identity,
         reply: (input) => adapter.reply(input),
         defer: (input) => adapter.defer(input),
       }
-      await component.execute(ctx)
+      await runWithMiddleware({
+        ctx,
+        middleware,
+        execute: (nextCtx) => component.execute(nextCtx),
+        reportError,
+        errorContext: { phase: 'component', kind: component.descriptor.componentKind, id: component.descriptor.id },
+        replyUserError: (input) => adapter.reply(input),
+      })
       return
     }
 
@@ -111,6 +128,7 @@ export async function handleComponent<TServices>(
     const baseCtx: ButtonContext<Record<string, unknown>, TServices> = {
       params,
       services: options.deps.services,
+      ...identity,
       components,
       update: (input) => adapter.update(input),
       reply: (input) => adapter.reply(input),
@@ -124,10 +142,26 @@ export async function handleComponent<TServices>(
         ...baseCtx,
         values: adapter.values,
       }
-      await component.execute(ctx)
+      await runWithMiddleware({
+        ctx,
+        middleware,
+        execute: (nextCtx) => component.execute(nextCtx),
+        reportError,
+        errorContext: { phase: 'component', kind: component.descriptor.componentKind, id: component.descriptor.id },
+        replyUserError: (input) => adapter.reply(input),
+      })
       return
     }
-    if (isButtonDefinition(component)) await component.execute(baseCtx)
+    if (isButtonDefinition(component)) {
+      await runWithMiddleware({
+        ctx: baseCtx,
+        middleware,
+        execute: (nextCtx) => component.execute(nextCtx),
+        reportError,
+        errorContext: { phase: 'component', kind: component.descriptor.componentKind, id: component.descriptor.id },
+        replyUserError: (input) => adapter.reply(input),
+      })
+    }
   } catch (error) {
     reportError(error, { phase: 'component', kind: component.descriptor.componentKind, id: component.descriptor.id })
   }

@@ -36,6 +36,7 @@ describe('defineCommand', () => {
     await cmd.execute?.({
       options: {},
       services: { n: 1 },
+      userId: 'user-1',
       components: { button: vi.fn() as never, select: vi.fn() as never },
       reply: async () => {},
       defer: async () => {},

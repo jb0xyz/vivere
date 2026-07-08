@@ -4,6 +4,7 @@ import type {
   EventDescriptor,
   ParamDescriptor,
 } from '../authoring/ir.js'
+import type { MiddlewareDescriptor } from '../authoring/middleware.js'
 import { serializeCommand, type SerializedCommand } from './serialize.js'
 
 export type SerializedEvent = EventDescriptor
@@ -14,6 +15,7 @@ export type SerializedComponent = ComponentDescriptor
 
 export interface Manifest {
   schemaVersion: 1
+  middleware: MiddlewareDescriptor[]
   commands: SerializedCommand[]
   events: SerializedEvent[]
   components: SerializedComponent[]
@@ -23,6 +25,7 @@ export interface BuildManifestInput {
   commands: ApplicationCommandDescriptor[]
   events: EventDescriptor[]
   components: ComponentDescriptor[]
+  middleware?: MiddlewareDescriptor[]
 }
 
 export function serializeEvent(event: EventDescriptor): SerializedEvent {
@@ -64,6 +67,7 @@ export function serializeComponent(component: ComponentDescriptor): SerializedCo
 export function buildManifest(input: BuildManifestInput): Manifest {
   return {
     schemaVersion: 1,
+    middleware: [...(input.middleware ?? [])].sort((a, b) => a.name.localeCompare(b.name)),
     commands: input.commands.map(serializeCommand).sort((a, b) => a.name.localeCompare(b.name)),
     events: input.events
       .map(serializeEvent)

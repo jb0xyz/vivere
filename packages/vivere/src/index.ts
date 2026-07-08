@@ -34,6 +34,17 @@ export type {
   SelectDescriptor,
   UserCommandDescriptor,
 } from './authoring/ir.js'
+export { VivereUserError } from './authoring/middleware.js'
+export type {
+  AnyMiddlewareDefinition,
+  InferMiddlewareExtensions,
+  MiddlewareBefore,
+  MiddlewareContext,
+  MiddlewareDefinition,
+  MiddlewareDescriptor,
+  MiddlewareInput,
+  MiddlewareNext,
+} from './authoring/middleware.js'
 export { opt } from './authoring/opt.js'
 export type {
   AutocompleteResolver,
@@ -63,6 +74,7 @@ export type {
   ComponentSpec,
   ComponentsBuilder,
   EventContext,
+  InteractionIdentity,
   MessageCommandContext,
   ModalContext,
   ModalDefinitionForParams,

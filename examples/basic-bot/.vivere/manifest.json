@@ -1,5 +1,6 @@
 {
   "schemaVersion": 1,
+  "middleware": [],
   "commands": [
     {
       "kind": "command",
@@ -53,7 +54,10 @@
       "route": [
         "ping"
       ],
-      "options": []
+      "options": [],
+      "middleware": [
+        "log"
+      ]
     },
     {
       "kind": "command",

@@ -22,6 +22,13 @@ import type {
   UserCommandDescriptor,
 } from './ir.js'
 import { toDiscordName } from './naming.js'
+import type {
+  AnyMiddlewareDefinition,
+  InferMiddlewareExtensions,
+  MiddlewareDefinition,
+  MiddlewareInput,
+} from './middleware.js'
+import { defineMiddleware as createMiddleware } from './middleware.js'
 import type { AutocompleteResolver, InferOptions, OptionsRecord } from './opt.js'
 import { createOpt } from './opt.js'
 import type { InferParams, ParamsRecord } from './param.js'
@@ -36,35 +43,51 @@ export interface ParamCodec {
 
 export interface CommandDefinition<TServices = unknown> {
   readonly descriptor: CommandDescriptor
+  readonly middleware: AnyMiddlewareDefinition<TServices>[]
   readonly autocomplete: Record<string, AutocompleteResolver<TServices>>
   readonly execute?: (ctx: CommandContext<Record<string, unknown>, TServices>) => Promise<void>
 }
 
-export interface CommandInput<TOptions extends OptionsRecord<TServices>, TServices> {
+export interface CommandInput<
+  TOptions extends OptionsRecord<TServices>,
+  TServices,
+  TMiddlewareList extends readonly AnyMiddlewareDefinition<TServices>[] = [],
+> {
   name: string
   description: string
   options?: TOptions
-  execute?(ctx: CommandContext<InferOptions<TOptions>, TServices>): Promise<void>
+  use?: TMiddlewareList
+  execute?(ctx: CommandContext<InferOptions<TOptions>, TServices> & InferMiddlewareExtensions<TMiddlewareList>): Promise<void>
 }
 
 export interface UserCommandDefinition<TServices = unknown> {
   readonly descriptor: UserCommandDescriptor
+  readonly middleware: AnyMiddlewareDefinition<TServices>[]
   readonly execute: (ctx: UserCommandContext<TServices>) => Promise<void>
 }
 
-export interface UserCommandInput<TServices> {
+export interface UserCommandInput<
+  TServices,
+  TMiddlewareList extends readonly AnyMiddlewareDefinition<TServices>[] = [],
+> {
   name: string
-  execute(ctx: UserCommandContext<TServices, User>): Promise<void>
+  use?: TMiddlewareList
+  execute(ctx: UserCommandContext<TServices, User> & InferMiddlewareExtensions<TMiddlewareList>): Promise<void>
 }
 
 export interface MessageCommandDefinition<TServices = unknown> {
   readonly descriptor: MessageCommandDescriptor
+  readonly middleware: AnyMiddlewareDefinition<TServices>[]
   readonly execute: (ctx: MessageCommandContext<TServices>) => Promise<void>
 }
 
-export interface MessageCommandInput<TServices> {
+export interface MessageCommandInput<
+  TServices,
+  TMiddlewareList extends readonly AnyMiddlewareDefinition<TServices>[] = [],
+> {
   name: string
-  execute(ctx: MessageCommandContext<TServices, Message>): Promise<void>
+  use?: TMiddlewareList
+  execute(ctx: MessageCommandContext<TServices, Message> & InferMiddlewareExtensions<TMiddlewareList>): Promise<void>
 }
 
 export type ApplicationCommandDefinition<TServices = unknown> =
@@ -74,39 +97,57 @@ export type ApplicationCommandDefinition<TServices = unknown> =
 
 export interface EventDefinition<TServices = unknown> {
   readonly descriptor: EventDescriptor
+  readonly middleware: AnyMiddlewareDefinition<TServices>[]
   readonly execute: (ctx: EventContext<TServices>, ...args: unknown[]) => Promise<void>
 }
 
-export interface EventInput<K extends keyof ClientEvents, TServices> {
+export interface EventInput<
+  K extends keyof ClientEvents,
+  TServices,
+  TMiddlewareList extends readonly AnyMiddlewareDefinition<TServices>[] = [],
+> {
   name: K
   once?: boolean
-  execute(ctx: EventContext<TServices, Client>, ...args: ClientEvents[K]): Promise<void>
+  use?: TMiddlewareList
+  execute(ctx: EventContext<TServices, Client> & InferMiddlewareExtensions<TMiddlewareList>, ...args: ClientEvents[K]): Promise<void>
 }
 
 export interface ButtonDefinition<TServices = unknown, TParams extends ParamsRecord = ParamsRecord> {
   readonly descriptor: ButtonDescriptor
+  readonly middleware: AnyMiddlewareDefinition<TServices>[]
   readonly codecs: Record<string, ParamCodec>
   readonly __params?: InferParams<TParams>
   readonly execute: (ctx: ButtonContext<Record<string, unknown>, TServices>) => Promise<void>
 }
 
-export interface ButtonInput<TParams extends ParamsRecord, TServices> {
+export interface ButtonInput<
+  TParams extends ParamsRecord,
+  TServices,
+  TMiddlewareList extends readonly AnyMiddlewareDefinition<TServices>[] = [],
+> {
   id: string
   params?: TParams
-  execute(ctx: ButtonContext<InferParams<TParams>, TServices>): Promise<void>
+  use?: TMiddlewareList
+  execute(ctx: ButtonContext<InferParams<TParams>, TServices> & InferMiddlewareExtensions<TMiddlewareList>): Promise<void>
 }
 
 export interface SelectDefinition<TServices = unknown, TParams extends ParamsRecord = ParamsRecord> {
   readonly descriptor: SelectDescriptor
+  readonly middleware: AnyMiddlewareDefinition<TServices>[]
   readonly codecs: Record<string, ParamCodec>
   readonly __params?: InferParams<TParams>
   readonly execute: (ctx: SelectContext<Record<string, unknown>, TServices>) => Promise<void>
 }
 
-export interface SelectInput<TParams extends ParamsRecord, TServices> {
+export interface SelectInput<
+  TParams extends ParamsRecord,
+  TServices,
+  TMiddlewareList extends readonly AnyMiddlewareDefinition<TServices>[] = [],
+> {
   id: string
   params?: TParams
-  execute(ctx: SelectContext<InferParams<TParams>, TServices>): Promise<void>
+  use?: TMiddlewareList
+  execute(ctx: SelectContext<InferParams<TParams>, TServices> & InferMiddlewareExtensions<TMiddlewareList>): Promise<void>
 }
 
 export interface ModalDefinition<
@@ -115,17 +156,27 @@ export interface ModalDefinition<
   TFields extends FieldsRecord = FieldsRecord,
 > {
   readonly descriptor: ModalDescriptor
+  readonly middleware: AnyMiddlewareDefinition<TServices>[]
   readonly codecs: Record<string, ParamCodec>
   readonly __params?: InferParams<TParams>
   readonly __fields?: InferFields<TFields>
   readonly execute: (ctx: ModalContext<Record<string, unknown>, Record<string, string>, TServices>) => Promise<void>
 }
 
-export interface ModalInput<TParams extends ParamsRecord, TFields extends FieldsRecord, TServices> {
+export interface ModalInput<
+  TParams extends ParamsRecord,
+  TFields extends FieldsRecord,
+  TServices,
+  TMiddlewareList extends readonly AnyMiddlewareDefinition<TServices>[] = [],
+> {
   id: string
   params?: TParams
   fields: TFields
-  execute(ctx: ModalContext<InferParams<TParams>, InferFields<TFields>, TServices>): Promise<void>
+  use?: TMiddlewareList
+  execute(
+    ctx: ModalContext<InferParams<TParams>, InferFields<TFields>, TServices> &
+      InferMiddlewareExtensions<TMiddlewareList>,
+  ): Promise<void>
 }
 
 export type ComponentDefinition<TServices = unknown> =
@@ -170,6 +221,11 @@ function createAutocompleteResolvers<TServices>(
   return Object.fromEntries(resolverList)
 }
 
+function createMiddlewareNames<TServices>(middleware: readonly AnyMiddlewareDefinition<TServices>[] = []): string[] | undefined {
+  if (middleware.length === 0) return undefined
+  return middleware.map((item) => item.descriptor.name)
+}
+
 function createParamDescriptors(params: ParamsRecord): ParamDescriptor[] {
   return Object.entries(params).map(([name, node]) => ({
     name,
@@ -207,6 +263,7 @@ function createComponentDescriptor(
   kind: ComponentDescriptor['kind'],
   id: string,
   params: ParamsRecord,
+  middleware: readonly AnyMiddlewareDefinition[],
   fields?: FieldsRecord,
 ): ComponentDescriptor {
   if (!/^[a-z0-9-]+$/.test(id)) throw new Error(`Invalid component id: ${id}`)
@@ -217,6 +274,7 @@ function createComponentDescriptor(
       componentKind: kind,
       id,
       params: createParamDescriptors(params),
+      ...(createMiddlewareNames(middleware) ? { middleware: createMiddlewareNames(middleware) } : {}),
     }
   }
 
@@ -226,6 +284,7 @@ function createComponentDescriptor(
       componentKind: kind,
       id,
       params: createParamDescriptors(params),
+      ...(createMiddlewareNames(middleware) ? { middleware: createMiddlewareNames(middleware) } : {}),
     }
   }
 
@@ -235,84 +294,117 @@ function createComponentDescriptor(
     id,
     params: createParamDescriptors(params),
     fields: createFieldDescriptors(fields ?? {}),
+    ...(createMiddlewareNames(middleware) ? { middleware: createMiddlewareNames(middleware) } : {}),
   }
 }
 
 export function createVivere<TServices>() {
   const boundOpt = createOpt<TServices>()
 
-  function defineCommand<TOptions extends OptionsRecord<TServices> = Record<string, never>>(
-    input: CommandInput<TOptions, TServices>,
+  function defineCommand<
+    TOptions extends OptionsRecord<TServices> = Record<string, never>,
+    TMiddlewareList extends readonly AnyMiddlewareDefinition<TServices>[] = [],
+  >(
+    input: CommandInput<TOptions, TServices, TMiddlewareList>,
   ): CommandDefinition<TServices> {
     const options = input.options ?? ({} as TOptions)
+    const middleware = [...(input.use ?? [])] as AnyMiddlewareDefinition<TServices>[]
     const descriptor: CommandDescriptor = {
       kind: 'command',
       name: input.name,
       description: input.description,
       route: [input.name],
       options: createOptionDescriptors(options),
+      ...(createMiddlewareNames(middleware) ? { middleware: createMiddlewareNames(middleware) } : {}),
     }
     const autocomplete = createAutocompleteResolvers(options)
-    if (!input.execute) return { descriptor, autocomplete }
+    if (!input.execute) return { descriptor, middleware, autocomplete }
     return {
       descriptor,
+      middleware,
       autocomplete,
       execute: input.execute as NonNullable<CommandDefinition<TServices>['execute']>,
     }
   }
 
-  function defineEvent<K extends keyof ClientEvents>(input: EventInput<K, TServices>): EventDefinition<TServices> {
+  function defineEvent<
+    K extends keyof ClientEvents,
+    TMiddlewareList extends readonly AnyMiddlewareDefinition<TServices>[] = [],
+  >(input: EventInput<K, TServices, TMiddlewareList>): EventDefinition<TServices> {
+    const middleware = [...(input.use ?? [])] as AnyMiddlewareDefinition<TServices>[]
     return {
       descriptor: {
         kind: 'event',
         name: input.name,
         once: input.once ?? false,
+        ...(createMiddlewareNames(middleware) ? { middleware: createMiddlewareNames(middleware) } : {}),
       },
+      middleware,
       execute: input.execute as EventDefinition<TServices>['execute'],
     }
   }
 
-  function defineUserCommand(input: UserCommandInput<TServices>): UserCommandDefinition<TServices> {
+  function defineUserCommand<TMiddlewareList extends readonly AnyMiddlewareDefinition<TServices>[] = []>(
+    input: UserCommandInput<TServices, TMiddlewareList>,
+  ): UserCommandDefinition<TServices> {
+    const middleware = [...(input.use ?? [])] as AnyMiddlewareDefinition<TServices>[]
     const descriptor: UserCommandDescriptor = {
       kind: 'userCommand',
       name: input.name,
+      ...(createMiddlewareNames(middleware) ? { middleware: createMiddlewareNames(middleware) } : {}),
     }
     return {
       descriptor,
+      middleware,
       execute: input.execute as UserCommandDefinition<TServices>['execute'],
     }
   }
 
-  function defineMessageCommand(input: MessageCommandInput<TServices>): MessageCommandDefinition<TServices> {
+  function defineMessageCommand<TMiddlewareList extends readonly AnyMiddlewareDefinition<TServices>[] = []>(
+    input: MessageCommandInput<TServices, TMiddlewareList>,
+  ): MessageCommandDefinition<TServices> {
+    const middleware = [...(input.use ?? [])] as AnyMiddlewareDefinition<TServices>[]
     const descriptor: MessageCommandDescriptor = {
       kind: 'messageCommand',
       name: input.name,
+      ...(createMiddlewareNames(middleware) ? { middleware: createMiddlewareNames(middleware) } : {}),
     }
     return {
       descriptor,
+      middleware,
       execute: input.execute as MessageCommandDefinition<TServices>['execute'],
     }
   }
 
-  function defineButton<TParams extends ParamsRecord = Record<string, never>>(
-    input: ButtonInput<TParams, TServices>,
+  function defineButton<
+    TParams extends ParamsRecord = Record<string, never>,
+    TMiddlewareList extends readonly AnyMiddlewareDefinition<TServices>[] = [],
+  >(
+    input: ButtonInput<TParams, TServices, TMiddlewareList>,
   ): ButtonDefinition<TServices, TParams> {
     const params = input.params ?? ({} as TParams)
+    const middleware = [...(input.use ?? [])] as AnyMiddlewareDefinition<TServices>[]
 
     return {
-      descriptor: createComponentDescriptor('button', input.id, params) as ButtonDescriptor,
+      descriptor: createComponentDescriptor('button', input.id, params, middleware) as ButtonDescriptor,
+      middleware,
       codecs: createParamCodecs(params),
       execute: input.execute as ButtonDefinition<TServices, TParams>['execute'],
     }
   }
 
-  function defineSelect<TParams extends ParamsRecord = Record<string, never>>(
-    input: SelectInput<TParams, TServices>,
+  function defineSelect<
+    TParams extends ParamsRecord = Record<string, never>,
+    TMiddlewareList extends readonly AnyMiddlewareDefinition<TServices>[] = [],
+  >(
+    input: SelectInput<TParams, TServices, TMiddlewareList>,
   ): SelectDefinition<TServices, TParams> {
     const params = input.params ?? ({} as TParams)
+    const middleware = [...(input.use ?? [])] as AnyMiddlewareDefinition<TServices>[]
 
     return {
-      descriptor: createComponentDescriptor('select', input.id, params) as SelectDescriptor,
+      descriptor: createComponentDescriptor('select', input.id, params, middleware) as SelectDescriptor,
+      middleware,
       codecs: createParamCodecs(params),
       execute: input.execute as SelectDefinition<TServices, TParams>['execute'],
     }
@@ -321,14 +413,23 @@ export function createVivere<TServices>() {
   function defineModal<
     TParams extends ParamsRecord = Record<string, never>,
     TFields extends FieldsRecord = Record<string, never>,
-  >(input: ModalInput<TParams, TFields, TServices>): ModalDefinition<TServices, TParams, TFields> {
+    TMiddlewareList extends readonly AnyMiddlewareDefinition<TServices>[] = [],
+  >(input: ModalInput<TParams, TFields, TServices, TMiddlewareList>): ModalDefinition<TServices, TParams, TFields> {
     const params = input.params ?? ({} as TParams)
+    const middleware = [...(input.use ?? [])] as AnyMiddlewareDefinition<TServices>[]
 
     return {
-      descriptor: createComponentDescriptor('modal', input.id, params, input.fields) as ModalDescriptor,
+      descriptor: createComponentDescriptor('modal', input.id, params, middleware, input.fields) as ModalDescriptor,
+      middleware,
       codecs: createParamCodecs(params),
       execute: input.execute as ModalDefinition<TServices, TParams, TFields>['execute'],
     }
+  }
+
+  function defineMiddleware<TExtension extends Record<string, unknown> = Record<string, never>>(
+    input: MiddlewareInput<TServices, TExtension>,
+  ): MiddlewareDefinition<TServices, TExtension> {
+    return createMiddleware(input)
   }
 
   function definePlugin(input: PluginInput<TServices>): PluginDefinition<TServices> {
@@ -344,6 +445,7 @@ export function createVivere<TServices>() {
     defineCommand,
     defineUserCommand,
     defineMessageCommand,
+    defineMiddleware,
     defineEvent,
     defineButton,
     defineSelect,

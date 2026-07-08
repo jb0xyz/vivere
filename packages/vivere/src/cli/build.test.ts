@@ -72,6 +72,7 @@ test('writes manifest from configured TypeScript files', async () => {
   expect(result.changed).toBe(true)
   expect(JSON.parse(json)).toEqual({
     schemaVersion: 1,
+    middleware: [],
     commands: [
       {
         kind: 'command',

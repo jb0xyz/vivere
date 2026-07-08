@@ -6,7 +6,12 @@ export interface AutocompleteChoice {
   name: string
   value: string
 }
-export interface AutocompleteContext<TServices> {
+export interface InteractionIdentity {
+  userId: string
+  guildId?: string
+}
+
+export interface AutocompleteContext<TServices> extends InteractionIdentity {
   services: TServices
   value: string
 }
@@ -88,7 +93,7 @@ export interface ComponentsBuilder {
   ): ActionRowSpec
 }
 
-export interface CommandContext<TOptions, TServices> {
+export interface CommandContext<TOptions, TServices> extends InteractionIdentity {
   options: TOptions
   services: TServices
   components: ComponentsBuilder
@@ -100,26 +105,26 @@ export interface CommandContext<TOptions, TServices> {
   ): Promise<void>
 }
 
-export interface UserCommandContext<TServices, TTargetUser = unknown> {
+export interface UserCommandContext<TServices, TTargetUser = unknown> extends InteractionIdentity {
   services: TServices
   targetUser: TTargetUser
   reply(input: ReplyInput): Promise<void>
   defer(input?: DeferInput): Promise<void>
 }
 
-export interface MessageCommandContext<TServices, TTargetMessage = unknown> {
+export interface MessageCommandContext<TServices, TTargetMessage = unknown> extends InteractionIdentity {
   services: TServices
   targetMessage: TTargetMessage
   reply(input: ReplyInput): Promise<void>
   defer(input?: DeferInput): Promise<void>
 }
 
-export interface EventContext<TServices, TClient = unknown> {
+export interface EventContext<TServices, TClient = unknown> extends InteractionIdentity {
   services: TServices
   client: TClient
 }
 
-export interface ButtonContext<TParams, TServices> {
+export interface ButtonContext<TParams, TServices> extends InteractionIdentity {
   params: TParams
   services: TServices
   components: ComponentsBuilder
@@ -136,7 +141,7 @@ export interface SelectContext<TParams, TServices> extends ButtonContext<TParams
   values: string[]
 }
 
-export interface ModalContext<TParams, TFields, TServices> {
+export interface ModalContext<TParams, TFields, TServices> extends InteractionIdentity {
   params: TParams
   fields: TFields
   services: TServices

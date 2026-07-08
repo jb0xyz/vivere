@@ -166,41 +166,39 @@ createApp({
 
 createApp({
   config: { token: 'token', intents: [] },
-  // @ts-expect-error commands require logger service
   createServices: async () => ({}),
+  // @ts-expect-error commands require logger service
   commands: [demoCommand],
-  buttons: [confirmButton],
-  events: [joinEvent],
 })
 
 createApp({
   config: { token: 'token', intents: [] },
-  // @ts-expect-error events require logger service
   createServices: async () => ({}),
   commands: [],
   buttons: [],
+  // @ts-expect-error events require logger service
   events: [joinEvent],
 })
 
 createApp({
   config: { token: 'token', intents: [] },
-  // @ts-expect-error buttons require logger service
   createServices: async () => ({}),
   commands: [],
+  // @ts-expect-error buttons require logger service
   buttons: [confirmButton],
 })
 
 createApp({
   config: { token: 'token', intents: [] },
-  // @ts-expect-error components require logger service
   createServices: async () => ({}),
   commands: [],
+  // @ts-expect-error components require logger service
   components: [pickRoleSelect, feedbackModal],
 })
 
 createApp({
   config: { token: 'token', intents: [] },
-  // @ts-expect-error plugins require logger service
   createServices: async () => ({}),
+  // @ts-expect-error plugins require logger service
   plugins: [demoPlugin],
 })

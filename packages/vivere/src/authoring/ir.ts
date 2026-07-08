@@ -18,16 +18,19 @@ export interface CommandDescriptor {
   description: string
   route: string[]
   options: OptionDescriptor[]
+  middleware?: string[]
 }
 
 export interface UserCommandDescriptor {
   kind: 'userCommand'
   name: string
+  middleware?: string[]
 }
 
 export interface MessageCommandDescriptor {
   kind: 'messageCommand'
   name: string
+  middleware?: string[]
 }
 
 export type ApplicationCommandDescriptor = CommandDescriptor | UserCommandDescriptor | MessageCommandDescriptor
@@ -44,6 +47,7 @@ export interface ButtonDescriptor {
   componentKind: 'button'
   id: string
   params: ParamDescriptor[]
+  middleware?: string[]
 }
 
 export interface SelectDescriptor {
@@ -51,6 +55,7 @@ export interface SelectDescriptor {
   componentKind: 'select'
   id: string
   params: ParamDescriptor[]
+  middleware?: string[]
 }
 
 export interface FieldDescriptor {
@@ -69,6 +74,7 @@ export interface ModalDescriptor {
   id: string
   params: ParamDescriptor[]
   fields: FieldDescriptor[]
+  middleware?: string[]
 }
 
 export type ComponentDescriptor = ButtonDescriptor | SelectDescriptor | ModalDescriptor
@@ -77,4 +83,5 @@ export interface EventDescriptor {
   kind: 'event'
   name: keyof ClientEvents
   once: boolean
+  middleware?: string[]
 }

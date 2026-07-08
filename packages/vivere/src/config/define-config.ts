@@ -1,4 +1,5 @@
 import type { PluginDefinition } from '../authoring/create-vivere.js'
+import type { AnyMiddlewareDefinition } from '../authoring/middleware.js'
 
 export interface VivereConfig<TServices = unknown> {
   discovery: {
@@ -8,6 +9,7 @@ export interface VivereConfig<TServices = unknown> {
   }
   devGuildId?: string
   plugins?: PluginDefinition<TServices>[]
+  middleware?: AnyMiddlewareDefinition<TServices>[]
   dev?: {
     entry?: string
   }

@@ -5,6 +5,7 @@ import type {
   EventDefinition,
   PluginDefinition,
 } from '../authoring/create-vivere.js'
+import type { AnyMiddlewareDefinition } from '../authoring/middleware.js'
 import type { AutocompleteChoice, DeferInput, ModalSpec, ReplyInput } from '../authoring/types.js'
 import type { ComponentKind } from '../components/custom-id.js'
 import { encodeCustomId } from '../components/custom-id.js'
@@ -18,6 +19,8 @@ import type {
   SelectInteractionAdapter,
   UserCommandInteractionAdapter,
 } from '../runtime/interaction-adapter.js'
+import { reportError as defaultReportError } from '../internal/errors.js'
+import { runWithMiddleware } from '../runtime/middleware.js'
 import { createRouter } from '../runtime/router.js'
 
 export type TestReply = Exclude<ReplyInput, string>
@@ -34,12 +37,18 @@ export interface CreateTestBotInput<TServices> {
   events?: EventDefinition<TServices>[]
   components?: ComponentDefinition<TServices>[]
   plugins?: PluginDefinition<TServices>[]
+  middleware?: AnyMiddlewareDefinition<TServices>[]
   services?: TServices
   createServices?: () => TServices | Promise<TServices>
   reportError?: ErrorReporter
 }
 
-export interface TestCommandRunInput {
+export interface TestIdentityInput {
+  userId?: string
+  guildId?: string
+}
+
+export interface TestCommandRunInput extends TestIdentityInput {
   options?: Record<string, unknown>
 }
 
@@ -57,24 +66,24 @@ export interface TestModalInput {
   fields?: Record<string, string>
 }
 
-export interface TestUserCommandRunInput {
+export interface TestUserCommandRunInput extends TestIdentityInput {
   targetUser: unknown
 }
 
-export interface TestMessageCommandRunInput {
+export interface TestMessageCommandRunInput extends TestIdentityInput {
   targetMessage: unknown
 }
 
-export interface TestAutocompleteInput {
+export interface TestAutocompleteInput extends TestIdentityInput {
   option: string
   value: string
 }
 
 export interface TestBot {
   command(route: string): { run(input?: TestCommandRunInput): Promise<TestRunResult> }
-  button(id: string, input?: TestButtonInput): { run(): Promise<TestRunResult> }
-  select(id: string, input?: TestSelectInput): { run(): Promise<TestRunResult> }
-  modal(id: string, input?: TestModalInput): { run(): Promise<TestRunResult> }
+  button(id: string, input?: TestButtonInput): { run(input?: TestIdentityInput): Promise<TestRunResult> }
+  select(id: string, input?: TestSelectInput): { run(input?: TestIdentityInput): Promise<TestRunResult> }
+  modal(id: string, input?: TestModalInput): { run(input?: TestIdentityInput): Promise<TestRunResult> }
   userCommand(name: string): { run(input: TestUserCommandRunInput): Promise<TestRunResult> }
   messageCommand(name: string): { run(input: TestMessageCommandRunInput): Promise<TestRunResult> }
   autocomplete(route: string, input: TestAutocompleteInput): Promise<AutocompleteChoice[]>
@@ -93,6 +102,13 @@ function createCapture(): TestRunResult {
     replies: [],
     updates: [],
     defers: [],
+  }
+}
+
+function getTestIdentity(input: TestIdentityInput = {}) {
+  return {
+    userId: input.userId ?? 'test-user',
+    ...(input.guildId ? { guildId: input.guildId } : {}),
   }
 }
 
@@ -146,6 +162,7 @@ function createCommandAdapter<TServices>(
   route: string,
   command: CommandDefinition<TServices> | undefined,
   options: Record<string, unknown>,
+  identity: TestIdentityInput,
   capture: TestRunResult,
 ): ChatInputInteractionAdapter {
   const routeList = parseRoute(route)
@@ -154,6 +171,7 @@ function createCommandAdapter<TServices>(
     kind: 'command',
     commandName: routeList[0] ?? route,
     route: routeList,
+    ...getTestIdentity(identity),
     getOption(name, _kind, required) {
       const value = optionValues[name]
       if (value === undefined && required) throw new Error(`Missing required option: ${name}`)
@@ -175,6 +193,7 @@ function createAutocompleteAdapter(
   route: string,
   focusedName: string,
   focusedValue: string,
+  identity: TestIdentityInput,
   choices: AutocompleteChoice[],
 ): AutocompleteInteractionAdapter {
   const routeList = parseRoute(route)
@@ -184,6 +203,7 @@ function createAutocompleteAdapter(
     route: routeList,
     focusedName,
     focusedValue,
+    ...getTestIdentity(identity),
     async respond(input) {
       choices.splice(0, choices.length, ...input)
     },
@@ -246,10 +266,11 @@ function createCustomId<TServices>(
   )
 }
 
-function createButtonAdapter(customId: string, capture: TestRunResult): ButtonInteractionAdapter {
+function createButtonAdapter(customId: string, identity: TestIdentityInput, capture: TestRunResult): ButtonInteractionAdapter {
   return {
     kind: 'button',
     customId,
+    ...getTestIdentity(identity),
     async update(input) {
       capture.updates.push(normalizeReply(input))
     },
@@ -265,11 +286,17 @@ function createButtonAdapter(customId: string, capture: TestRunResult): ButtonIn
   }
 }
 
-function createSelectAdapter(customId: string, values: string[], capture: TestRunResult): SelectInteractionAdapter {
+function createSelectAdapter(
+  customId: string,
+  values: string[],
+  identity: TestIdentityInput,
+  capture: TestRunResult,
+): SelectInteractionAdapter {
   return {
     kind: 'select',
     customId,
     values,
+    ...getTestIdentity(identity),
     async update(input) {
       capture.updates.push(normalizeReply(input))
     },
@@ -288,12 +315,14 @@ function createSelectAdapter(customId: string, values: string[], capture: TestRu
 function createModalAdapter(
   customId: string,
   fields: Record<string, string>,
+  identity: TestIdentityInput,
   capture: TestRunResult,
 ): ModalInteractionAdapter {
   return {
     kind: 'modal',
     customId,
     fields,
+    ...getTestIdentity(identity),
     async reply(input) {
       capture.replies.push(normalizeReply(input))
     },
@@ -306,12 +335,14 @@ function createModalAdapter(
 function createUserCommandAdapter(
   name: string,
   targetUser: unknown,
+  identity: TestIdentityInput,
   capture: TestRunResult,
 ): UserCommandInteractionAdapter {
   return {
     kind: 'userCommand',
     commandName: name,
     targetUser,
+    ...getTestIdentity(identity),
     async reply(input) {
       capture.replies.push(normalizeReply(input))
     },
@@ -324,12 +355,14 @@ function createUserCommandAdapter(
 function createMessageCommandAdapter(
   name: string,
   targetMessage: unknown,
+  identity: TestIdentityInput,
   capture: TestRunResult,
 ): MessageCommandInteractionAdapter {
   return {
     kind: 'messageCommand',
     commandName: name,
     targetMessage,
+    ...getTestIdentity(identity),
     async reply(input) {
       capture.replies.push(normalizeReply(input))
     },
@@ -344,11 +377,13 @@ export function createTestBot<TServices = unknown>(input: CreateTestBotInput<TSe
   const componentList = getComponentList(input)
   const eventList = getEventList(input)
   const createServices = createServicesFactory(input)
+  const reportError = input.reportError ?? defaultReportError
   const router = createRouter({
     commands: commandList,
     components: componentList,
+    middleware: input.middleware,
     secret: TEST_SECRET,
-    reportError: input.reportError,
+    reportError,
   })
 
   async function dispatch(adapter: Parameters<typeof router.dispatch>[0], capture: TestRunResult): Promise<TestRunResult> {
@@ -363,39 +398,42 @@ export function createTestBot<TServices = unknown>(input: CreateTestBotInput<TSe
         async run(runInput = {}) {
           const capture = createCapture()
           const command = findSlashCommand(commandList, route)
-          return dispatch(createCommandAdapter(route, command, runInput.options ?? {}, capture), capture)
+          return dispatch(createCommandAdapter(route, command, runInput.options ?? {}, runInput, capture), capture)
         },
       }
     },
     button(id, buttonInput = {}) {
       return {
-        async run() {
+        async run(runInput = {}) {
           const component = findComponent(componentList, 'button', id)
           if (!component) throw new Error(`Unknown test button: ${id}`)
           const capture = createCapture()
-          return dispatch(createButtonAdapter(createCustomId(component, buttonInput.params ?? {}), capture), capture)
+          return dispatch(
+            createButtonAdapter(createCustomId(component, buttonInput.params ?? {}), runInput, capture),
+            capture,
+          )
         },
       }
     },
     select(id, selectInput = {}) {
       return {
-        async run() {
+        async run(runInput = {}) {
           const component = findComponent(componentList, 'select', id)
           if (!component) throw new Error(`Unknown test select: ${id}`)
           const capture = createCapture()
           const customId = createCustomId(component, selectInput.params ?? {})
-          return dispatch(createSelectAdapter(customId, selectInput.values ?? [], capture), capture)
+          return dispatch(createSelectAdapter(customId, selectInput.values ?? [], runInput, capture), capture)
         },
       }
     },
     modal(id, modalInput = {}) {
       return {
-        async run() {
+        async run(runInput = {}) {
           const component = findComponent(componentList, 'modal', id)
           if (!component) throw new Error(`Unknown test modal: ${id}`)
           const capture = createCapture()
           const customId = createCustomId(component, modalInput.params ?? {})
-          return dispatch(createModalAdapter(customId, modalInput.fields ?? {}, capture), capture)
+          return dispatch(createModalAdapter(customId, modalInput.fields ?? {}, runInput, capture), capture)
         },
       }
     },
@@ -403,7 +441,7 @@ export function createTestBot<TServices = unknown>(input: CreateTestBotInput<TSe
       return {
         async run(runInput) {
           const capture = createCapture()
-          return dispatch(createUserCommandAdapter(name, runInput.targetUser, capture), capture)
+          return dispatch(createUserCommandAdapter(name, runInput.targetUser, runInput, capture), capture)
         },
       }
     },
@@ -411,7 +449,7 @@ export function createTestBot<TServices = unknown>(input: CreateTestBotInput<TSe
       return {
         async run(runInput) {
           const capture = createCapture()
-          return dispatch(createMessageCommandAdapter(name, runInput.targetMessage, capture), capture)
+          return dispatch(createMessageCommandAdapter(name, runInput.targetMessage, runInput, capture), capture)
         },
       }
     },
@@ -422,6 +460,7 @@ export function createTestBot<TServices = unknown>(input: CreateTestBotInput<TSe
         route,
         findOptionName(command, autocompleteInput.option),
         autocompleteInput.value,
+        autocompleteInput,
         choices,
       )
       const services = await createServices()
@@ -435,7 +474,15 @@ export function createTestBot<TServices = unknown>(input: CreateTestBotInput<TSe
           await Promise.all(
             eventList
               .filter((event) => String(event.descriptor.name) === name)
-              .map((event) => event.execute({ services, client: {} }, ...args)),
+              .map((event) =>
+                runWithMiddleware({
+                  ctx: { services, client: {}, userId: 'system' },
+                  middleware: [...(input.middleware ?? []), ...event.middleware],
+                  execute: (nextCtx) => event.execute(nextCtx, ...args),
+                  reportError,
+                  errorContext: { phase: 'event', id: String(event.descriptor.name) },
+                }),
+              ),
           )
         },
       }

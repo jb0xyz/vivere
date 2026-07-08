@@ -1,6 +1,7 @@
 import { expectTypeOf } from 'expect-type'
 import {
   GatewayIntentBits,
+  VivereUserError,
   createApp,
   createVivere,
   defineConfig,
@@ -33,6 +34,12 @@ import type {
   EventInput,
   InferOptions,
   InferParams,
+  InteractionIdentity,
+  MiddlewareContext,
+  MiddlewareDefinition,
+  MiddlewareDescriptor,
+  MiddlewareInput,
+  MiddlewareNext,
   OptionKind,
   OptionNode,
   ParamKind,
@@ -54,6 +61,7 @@ expectTypeOf(defineConfig).toBeFunction()
 expectTypeOf(opt.string).toBeFunction()
 expectTypeOf(param.snowflake).toBeFunction()
 expectTypeOf(GatewayIntentBits.Guilds).toBeNumber()
+expectTypeOf(VivereUserError).toBeConstructibleWith('message')
 
 export type PublicTypes = [
   ActionRowSpec,
@@ -81,6 +89,12 @@ export type PublicTypes = [
   EventInput<'ready', unknown>,
   InferOptions<Record<string, never>>,
   InferParams<Record<string, never>>,
+  InteractionIdentity,
+  MiddlewareContext<unknown>,
+  MiddlewareDefinition,
+  MiddlewareDescriptor,
+  MiddlewareInput<unknown, Record<string, never>>,
+  MiddlewareNext,
   OptionKind,
   OptionNode<unknown, 'required'>,
   ParamKind,

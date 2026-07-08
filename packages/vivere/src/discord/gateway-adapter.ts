@@ -24,6 +24,13 @@ import type { InteractionRouter } from '../runtime/router.js'
 import { DISCORD_OPTION_KIND } from './option-kinds.js'
 import { renderInteractionDefer, renderInteractionReply, renderInteractionUpdate, renderModal } from './render.js'
 
+function getInteractionIdentity(interaction: { user?: { id?: string }; guildId?: string | null }) {
+  return {
+    userId: interaction.user?.id ?? 'unknown',
+    guildId: interaction.guildId ?? undefined,
+  }
+}
+
 export function toChatInputAdapter(
   interaction: ChatInputCommandInteraction,
 ): ChatInputInteractionAdapter {
@@ -35,6 +42,7 @@ export function toChatInputAdapter(
     kind: 'command',
     commandName: interaction.commandName,
     route,
+    ...getInteractionIdentity(interaction),
     getOption(name, kind, required) {
       return DISCORD_OPTION_KIND[kind].get(interaction.options, name, required)
     },
@@ -62,6 +70,7 @@ export function toAutocompleteAdapter(interaction: AutocompleteInteraction): Aut
     route,
     focusedName: focused.name,
     focusedValue: String(focused.value),
+    ...getInteractionIdentity(interaction),
     async respond(choices) {
       await interaction.respond(choices)
     },
@@ -73,6 +82,7 @@ export function toUserCommandAdapter(interaction: UserContextMenuCommandInteract
     kind: 'userCommand',
     commandName: interaction.commandName,
     targetUser: interaction.targetUser,
+    ...getInteractionIdentity(interaction),
     async reply(input) {
       await interaction.reply(renderInteractionReply(input))
     },
@@ -89,6 +99,7 @@ export function toMessageCommandAdapter(
     kind: 'messageCommand',
     commandName: interaction.commandName,
     targetMessage: interaction.targetMessage,
+    ...getInteractionIdentity(interaction),
     async reply(input) {
       await interaction.reply(renderInteractionReply(input))
     },
@@ -102,6 +113,7 @@ export function toButtonAdapter(interaction: ButtonInteraction): ButtonInteracti
   return {
     kind: 'button',
     customId: interaction.customId,
+    ...getInteractionIdentity(interaction),
     async update(input) {
       await interaction.update(renderInteractionUpdate(input))
     },
@@ -122,6 +134,7 @@ export function toSelectAdapter(interaction: StringSelectMenuInteraction): Selec
     kind: 'select',
     customId: interaction.customId,
     values: interaction.values,
+    ...getInteractionIdentity(interaction),
     async update(input) {
       await interaction.update(renderInteractionUpdate(input))
     },
@@ -150,6 +163,7 @@ export function toModalAdapter(interaction: ModalSubmitInteraction): ModalIntera
     kind: 'modal',
     customId: interaction.customId,
     fields,
+    ...getInteractionIdentity(interaction),
     async reply(input) {
       await interaction.reply(renderInteractionReply(input))
     },

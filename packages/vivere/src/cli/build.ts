@@ -48,6 +48,7 @@ export async function runBuild(input: RunBuildInput): Promise<RunBuildResult> {
       commands: definitions.commands.map((command) => command.descriptor),
       events: definitions.events.map((event) => event.descriptor),
       components: definitions.components.map((component) => component.descriptor),
+      middleware: config.middleware?.map((middleware) => middleware.descriptor),
     }),
   )
   const manifestPath = join(cwd, '.vivere/manifest.json')
