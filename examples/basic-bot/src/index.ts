@@ -10,6 +10,7 @@ const app = createApp({
   },
   createServices,
   discover: config.discovery,
+  plugins: config.plugins,
 })
 
 await app.start()

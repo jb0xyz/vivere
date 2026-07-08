@@ -40,6 +40,7 @@ export async function runBuild(input: RunBuildInput): Promise<RunBuildResult> {
   const definitions = await resolveProjectDefinitions({
     baseDir: configDir,
     discovery: config.discovery,
+    plugins: config.plugins,
     importer,
   })
   const manifestJson = manifestToJson(

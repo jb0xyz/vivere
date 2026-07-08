@@ -98,6 +98,20 @@ export type ComponentDefinition<TServices = unknown> =
   | SelectDefinition<TServices>
   | ModalDefinition<TServices>
 
+export interface PluginDefinition<TServices = unknown> {
+  readonly name: string
+  readonly commands: CommandDefinition<TServices>[]
+  readonly events: EventDefinition<TServices>[]
+  readonly components: ComponentDefinition<TServices>[]
+}
+
+export interface PluginInput<TServices> {
+  name: string
+  commands?: CommandDefinition<TServices>[]
+  events?: EventDefinition<TServices>[]
+  components?: ComponentDefinition<TServices>[]
+}
+
 function createOptionDescriptors<TServices>(options: OptionsRecord<TServices>): OptionDescriptor[] {
   return Object.entries(options).map(([property, node]) => ({
     property,
@@ -260,5 +274,14 @@ export function createVivere<TServices>() {
     }
   }
 
-  return { defineCommand, defineEvent, defineButton, defineSelect, defineModal, opt: boundOpt, param, field }
+  function definePlugin(input: PluginInput<TServices>): PluginDefinition<TServices> {
+    return {
+      name: input.name,
+      commands: input.commands ?? [],
+      events: input.events ?? [],
+      components: input.components ?? [],
+    }
+  }
+
+  return { defineCommand, defineEvent, defineButton, defineSelect, defineModal, definePlugin, opt: boundOpt, param, field }
 }

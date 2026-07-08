@@ -72,6 +72,15 @@
           "autocomplete": true
         }
       ]
+    },
+    {
+      "kind": "command",
+      "name": "status",
+      "description": "봇 상태를 확인합니다",
+      "route": [
+        "status"
+      ],
+      "options": []
     }
   ],
   "events": [

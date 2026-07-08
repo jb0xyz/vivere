@@ -53,6 +53,7 @@ export async function runSync(input: RunSyncInput): Promise<RunSyncResult> {
   const definitions = await resolveProjectDefinitions({
     baseDir: configDir,
     discovery: config.discovery,
+    plugins: config.plugins,
     importer,
   })
   const commands = buildCommandTree(definitions.commands.map((command) => command.descriptor))

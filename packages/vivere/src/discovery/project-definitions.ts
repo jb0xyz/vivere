@@ -4,6 +4,7 @@ import type {
   CommandDefinition,
   ComponentDefinition,
   EventDefinition,
+  PluginDefinition,
 } from '../authoring/create-vivere.js'
 import { assertUnique } from '../internal/collections.js'
 import type { DiscoverOptions } from './discover.js'
@@ -33,6 +34,7 @@ export interface ResolveProjectDefinitionsInput<TServices> {
   baseDir: string
   discovery?: ProjectDiscoveryConfig
   explicit?: ExplicitDefinitions<TServices>
+  plugins?: PluginDefinition<TServices>[]
   importer?: DiscoverOptions['import']
 }
 
@@ -56,6 +58,11 @@ export async function resolveProjectDefinitions<TServices>(
     ...(input.explicit?.components ?? []),
     ...discoveredComponents,
   ]
+  for (const plugin of input.plugins ?? []) {
+    commands.push(...plugin.commands)
+    events.push(...plugin.events)
+    components.push(...plugin.components)
+  }
   const buttons = components.filter((component): component is ButtonDefinition<TServices> =>
     component.descriptor.componentKind === 'button',
   )

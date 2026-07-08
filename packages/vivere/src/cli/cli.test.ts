@@ -11,16 +11,27 @@ test('parses sync command flags', () => {
   expect(parseCliArgs(['sync', '--global'])).toEqual({ kind: 'sync', global: true })
 })
 
+test('parses dev command', () => {
+  expect(parseCliArgs(['dev'])).toEqual({ kind: 'dev' })
+})
+
 test('rejects empty or unknown commands', () => {
-  expect(parseCliArgs([])).toEqual({ kind: 'usage', message: 'Usage: vivere <build|sync>' })
-  expect(parseCliArgs(['unknown'])).toEqual({ kind: 'usage', message: 'Unknown command: unknown\nUsage: vivere <build|sync>' })
+  expect(parseCliArgs([])).toEqual({ kind: 'usage', message: 'Usage: vivere <build|sync|dev>' })
+  expect(parseCliArgs(['unknown'])).toEqual({
+    kind: 'usage',
+    message: 'Unknown command: unknown\nUsage: vivere <build|sync|dev>',
+  })
   expect(parseCliArgs(['build', '--bad'])).toEqual({
     kind: 'usage',
-    message: 'Unknown option: --bad\nUsage: vivere <build|sync>',
+    message: 'Unknown option: --bad\nUsage: vivere <build|sync|dev>',
   })
   expect(parseCliArgs(['sync', '--bad'])).toEqual({
     kind: 'usage',
-    message: 'Unknown option: --bad\nUsage: vivere <build|sync>',
+    message: 'Unknown option: --bad\nUsage: vivere <build|sync|dev>',
+  })
+  expect(parseCliArgs(['dev', '--bad'])).toEqual({
+    kind: 'usage',
+    message: 'Unknown option: --bad\nUsage: vivere <build|sync|dev>',
   })
 })
 
@@ -72,4 +83,20 @@ test('dispatches sync success', async () => {
   expect(exitCode).toBe(0)
   expect(runSync).toHaveBeenCalledWith({ cwd: '/project', global: false })
   expect(writeOut).toHaveBeenCalledWith('Synced 2 commands to guild\n')
+})
+
+test('dispatches dev success', async () => {
+  const runDev = vi.fn(async () => {})
+  const writeOut = vi.fn()
+  const writeErr = vi.fn()
+
+  const exitCode = await runCli(['dev'], {
+    cwd: '/project',
+    runDev,
+    writeOut,
+    writeErr,
+  })
+
+  expect(exitCode).toBe(0)
+  expect(runDev).toHaveBeenCalledWith({ cwd: '/project' })
 })

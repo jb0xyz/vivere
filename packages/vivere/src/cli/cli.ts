@@ -1,19 +1,23 @@
 import type { RunBuildInput, RunBuildResult } from './build.js'
 import { runBuild as defaultRunBuild } from './build.js'
+import type { RunDevInput } from './dev.js'
+import { runDev as defaultRunDev } from './dev.js'
 import type { RunSyncInput, RunSyncResult } from './sync.js'
 import { runSync as defaultRunSync } from './sync.js'
 
-const USAGE = 'Usage: vivere <build|sync>'
+const USAGE = 'Usage: vivere <build|sync|dev>'
 
 export type CliCommand =
   | { kind: 'build'; check: boolean }
   | { kind: 'sync'; global: boolean }
+  | { kind: 'dev' }
   | { kind: 'usage'; message: string }
 
 export interface RunCliOptions {
   cwd: string
   runBuild?: (input: RunBuildInput) => Promise<RunBuildResult>
   runSync?: (input: RunSyncInput) => Promise<RunSyncResult>
+  runDev?: (input: RunDevInput) => Promise<void>
   writeOut?: (message: string) => void
   writeErr?: (message: string) => void
 }
@@ -21,7 +25,14 @@ export interface RunCliOptions {
 export function parseCliArgs(argv: string[]): CliCommand {
   const [command, ...args] = argv
   if (!command) return { kind: 'usage', message: USAGE }
-  if (command !== 'build' && command !== 'sync') return { kind: 'usage', message: `Unknown command: ${command}\n${USAGE}` }
+  if (command !== 'build' && command !== 'sync' && command !== 'dev') {
+    return { kind: 'usage', message: `Unknown command: ${command}\n${USAGE}` }
+  }
+
+  if (command === 'dev') {
+    if (args.length > 0) return { kind: 'usage', message: `Unknown option: ${args[0]}\n${USAGE}` }
+    return { kind: 'dev' }
+  }
 
   if (command === 'sync') {
     let global = false
@@ -54,6 +65,12 @@ export async function runCli(argv: string[], options: RunCliOptions): Promise<nu
   if (command.kind === 'usage') {
     writeErr(`${command.message}\n`)
     return 1
+  }
+
+  if (command.kind === 'dev') {
+    const runDev = options.runDev ?? defaultRunDev
+    await runDev({ cwd: options.cwd })
+    return 0
   }
 
   if (command.kind === 'sync') {

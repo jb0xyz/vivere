@@ -6,6 +6,7 @@ import type {
   CommandDefinition,
   ComponentDefinition,
   EventDefinition,
+  PluginDefinition,
 } from '../authoring/create-vivere.js'
 import type { ProjectDiscoveryConfig } from '../discovery/project-definitions.js'
 import { resolveProjectDefinitions } from '../discovery/project-definitions.js'
@@ -30,6 +31,7 @@ export interface CreateAppOptions<TServices> {
   buttons?: ButtonDefinition<TServices>[]
   components?: ComponentDefinition<TServices>[]
   events?: EventDefinition<TServices>[]
+  plugins?: PluginDefinition<TServices>[]
   discover?: AppDiscoveryConfig
 }
 
@@ -39,6 +41,7 @@ export interface ResolveDefinitionsInput<TServices> {
   buttons?: ButtonDefinition<TServices>[]
   components?: ComponentDefinition<TServices>[]
   events?: EventDefinition<TServices>[]
+  plugins?: PluginDefinition<TServices>[]
   discover?: AppDiscoveryConfig
 }
 
@@ -66,6 +69,7 @@ export async function resolveDefinitions<TServices>(
       buttons: input.buttons,
       components: input.components,
     },
+    plugins: input.plugins,
     importer,
   })
 }
@@ -86,6 +90,7 @@ export function createApp<TServices>(options: CreateAppOptions<TServices>): App 
         events: options.events,
         buttons: options.buttons,
         components: options.components,
+        plugins: options.plugins,
         discover: options.discover,
       })
       const router = createRouter({

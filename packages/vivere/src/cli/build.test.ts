@@ -21,9 +21,14 @@ async function writeProject(): Promise<void> {
     join(tmpRoot, 'vivere.config.ts'),
     [
       `import { defineConfig } from '${configSpecifier}'`,
+      `import { createVivere } from '${createVivereSpecifier}'`,
+      'const { defineCommand, definePlugin } = createVivere()',
+      "const pluginCommand = defineCommand({ name: 'plugin-ping', description: 'Plugin Pong', async execute() {} })",
+      "const plugin = definePlugin({ name: 'plugin', commands: [pluginCommand] })",
       'export default defineConfig({',
       "  discovery: { commands: 'src/commands', events: 'src/events', components: 'src/components' },",
       "  devGuildId: 'guild-1',",
+      '  plugins: [plugin],',
       '})',
     ].join('\n'),
   )
@@ -74,6 +79,13 @@ test('writes manifest from configured TypeScript files', async () => {
         description: 'Pong',
         route: ['ping'],
         options: [{ property: 'targetUser', name: 'target-user', kind: 'user', description: 'target', required: true }],
+      },
+      {
+        kind: 'command',
+        name: 'plugin-ping',
+        description: 'Plugin Pong',
+        route: ['plugin-ping'],
+        options: [],
       },
     ],
     events: [{ kind: 'event', name: 'ready', once: true }],

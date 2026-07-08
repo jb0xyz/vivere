@@ -4,7 +4,7 @@ import { createVivere } from './create-vivere.js'
 import { createApp } from '../runtime/create-app.js'
 
 type Services = { logger: { info(msg: string): void } }
-const { defineButton, defineCommand, defineEvent, defineModal, defineSelect, field, opt, param } =
+const { defineButton, defineCommand, defineEvent, defineModal, definePlugin, defineSelect, field, opt, param } =
   createVivere<Services>()
 
 const feedbackModal = defineModal({
@@ -108,6 +108,13 @@ const joinEvent = defineEvent({
   },
 })
 
+const demoPlugin = definePlugin({
+  name: 'demo',
+  commands: [demoCommand],
+  events: [joinEvent],
+  components: [confirmButton, pickRoleSelect, feedbackModal],
+})
+
 createApp({
   config: { token: 'token', intents: [] },
   createServices: async () => ({ logger: { info() {} }, extra: true }),
@@ -115,6 +122,7 @@ createApp({
   buttons: [confirmButton],
   components: [pickRoleSelect, feedbackModal],
   events: [joinEvent],
+  plugins: [demoPlugin],
 })
 
 createApp({
@@ -124,6 +132,7 @@ createApp({
   buttons: [confirmButton],
   components: [pickRoleSelect, feedbackModal],
   events: [joinEvent],
+  plugins: [demoPlugin],
 })
 
 createApp({
@@ -158,4 +167,11 @@ createApp({
   createServices: async () => ({}),
   commands: [],
   components: [pickRoleSelect, feedbackModal],
+})
+
+createApp({
+  config: { token: 'token', intents: [] },
+  // @ts-expect-error plugins require logger service
+  createServices: async () => ({}),
+  plugins: [demoPlugin],
 })

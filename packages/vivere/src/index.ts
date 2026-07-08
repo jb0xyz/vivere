@@ -10,6 +10,8 @@ export type {
   ModalDefinition,
   ModalInput,
   ParamCodec,
+  PluginDefinition,
+  PluginInput,
   SelectDefinition,
   SelectInput,
 } from './authoring/create-vivere.js'
