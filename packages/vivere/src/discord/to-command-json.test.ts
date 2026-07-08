@@ -44,6 +44,28 @@ test('maps options to Discord types and lists required ones first', () => {
   ])
 })
 
+test('maps command localizations to Discord JSON', () => {
+  const cmd = defineCommand({
+    name: 'hello',
+    description: 'Hello',
+    localizations: {
+      ja: { name: 'konnichiwa' },
+      ko: { name: 'annyeong', description: 'insa' },
+    },
+    async execute() {},
+  })
+
+  expect(toCommandJSON(cmd.descriptor)).toMatchObject({
+    name_localizations: {
+      ja: 'konnichiwa',
+      ko: 'annyeong',
+    },
+    description_localizations: {
+      ko: 'insa',
+    },
+  })
+})
+
 test('builds nested Discord command JSON from command routes', () => {
   const admin = defineCommand({ name: 'admin', description: 'Admin commands' })
   const user = defineCommand({ name: 'user', description: 'User commands' })

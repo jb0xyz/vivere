@@ -1,4 +1,5 @@
 import { createVivere } from '@jb0xyz/vivere'
+export { cooldown } from '@jb0xyz/vivere'
 
 export type Services = { logger: { info: (m: string) => void } }
 

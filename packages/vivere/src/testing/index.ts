@@ -6,7 +6,7 @@ import type {
   PluginDefinition,
 } from '../authoring/create-vivere.js'
 import type { AnyMiddlewareDefinition } from '../authoring/middleware.js'
-import type { AutocompleteChoice, DeferInput, ModalSpec, ReplyInput } from '../authoring/types.js'
+import type { AutocompleteChoice, DeferInput, InteractionMember, ModalSpec, ReplyInput } from '../authoring/types.js'
 import type { ComponentKind } from '../components/custom-id.js'
 import { encodeCustomId } from '../components/custom-id.js'
 import type { ErrorReporter } from '../internal/errors.js'
@@ -52,6 +52,8 @@ export interface CreateTestBotInput<TServices> {
 export interface TestIdentityInput {
   userId?: string
   guildId?: string
+  locale?: string
+  member?: InteractionMember
 }
 
 export interface TestCommandRunInput extends TestIdentityInput {
@@ -115,6 +117,8 @@ function getTestIdentity(input: TestIdentityInput = {}) {
   return {
     userId: input.userId ?? 'test-user',
     ...(input.guildId ? { guildId: input.guildId } : {}),
+    ...(input.locale ? { locale: input.locale } : {}),
+    ...(input.member ? { member: input.member } : {}),
   }
 }
 

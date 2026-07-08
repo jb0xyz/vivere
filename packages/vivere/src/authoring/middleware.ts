@@ -1,14 +1,13 @@
 import type { StorePorts } from '../stores/types.js'
+import type { InteractionIdentity } from './interaction-identity.js'
 
 export interface MiddlewareDescriptor {
   name: string
 }
 
-export interface MiddlewareContext<TServices = unknown> {
+export interface MiddlewareContext<TServices = unknown> extends InteractionIdentity {
   services: TServices
   stores: StorePorts
-  userId: string
-  guildId?: string
 }
 
 export type MiddlewareNext = <TExtension extends Record<string, unknown> = Record<string, never>>(

@@ -1,4 +1,5 @@
-import type { AutocompleteChoice, DeferInput, ModalSpec, ReplyInput } from '../authoring/types.js'
+import { PermissionsBitField } from 'discord.js'
+import type { AutocompleteChoice, DeferInput, InteractionMember, ModalSpec, ReplyInput } from '../authoring/types.js'
 import type { OptionKind } from '../authoring/opt.js'
 import type {
   AutocompleteInteractionAdapter,
@@ -23,8 +24,9 @@ import {
 interface HttpInteractionPayload {
   type: number
   guild_id?: string
+  locale?: string
   user?: { id?: string }
-  member?: { user?: { id?: string } }
+  member?: { user?: { id?: string }; roles?: string[]; permissions?: string }
   data?: HttpInteractionData
 }
 
@@ -73,10 +75,21 @@ function setResponse(capture: HttpAdapterCapture, response: InteractionResponseB
   capture.response = response
 }
 
+function getHttpMember(payload: HttpInteractionPayload): InteractionMember | undefined {
+  if (!payload.member) return undefined
+  return {
+    roles: payload.member.roles ?? [],
+    permissions: payload.member.permissions ? new PermissionsBitField(BigInt(payload.member.permissions)).toArray() : [],
+  }
+}
+
 function getIdentity(payload: HttpInteractionPayload) {
+  const member = getHttpMember(payload)
   return {
     userId: payload.user?.id ?? payload.member?.user?.id ?? 'unknown',
     ...(payload.guild_id ? { guildId: payload.guild_id } : {}),
+    ...(payload.locale ? { locale: payload.locale } : {}),
+    ...(member ? { member } : {}),
   }
 }
 

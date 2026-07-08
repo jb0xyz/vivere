@@ -1,83 +1,71 @@
-import type { AutocompleteChoice, DeferInput, ModalSpec, ReplyInput } from '../authoring/types.js'
+import type { AutocompleteChoice, DeferInput, InteractionMember, ModalSpec, ReplyInput } from '../authoring/types.js'
 import type { OptionKind } from '../authoring/opt.js'
 
 export interface AdapterIdentity {
   readonly userId?: string
   readonly guildId?: string
+  readonly locale?: string
+  readonly member?: InteractionMember
 }
 
-export interface ChatInputInteractionAdapter {
+export interface ChatInputInteractionAdapter extends AdapterIdentity {
   readonly kind: 'command'
   readonly commandName: string
   readonly route: string[]
-  readonly userId?: string
-  readonly guildId?: string
   getOption(name: string, kind: OptionKind, required: boolean): unknown
   reply(input: ReplyInput): Promise<void>
   deferReply(input?: DeferInput): Promise<void>
   showModal(input: ModalSpec): Promise<void>
 }
 
-export interface UserCommandInteractionAdapter {
+export interface UserCommandInteractionAdapter extends AdapterIdentity {
   readonly kind: 'userCommand'
   readonly commandName: string
   readonly targetUser: unknown
-  readonly userId?: string
-  readonly guildId?: string
   reply(input: ReplyInput): Promise<void>
   deferReply(input?: DeferInput): Promise<void>
 }
 
-export interface MessageCommandInteractionAdapter {
+export interface MessageCommandInteractionAdapter extends AdapterIdentity {
   readonly kind: 'messageCommand'
   readonly commandName: string
   readonly targetMessage: unknown
-  readonly userId?: string
-  readonly guildId?: string
   reply(input: ReplyInput): Promise<void>
   deferReply(input?: DeferInput): Promise<void>
 }
 
-export interface AutocompleteInteractionAdapter {
+export interface AutocompleteInteractionAdapter extends AdapterIdentity {
   readonly kind: 'autocomplete'
   readonly commandName: string
   readonly route: string[]
   readonly focusedName: string
   readonly focusedValue: string
-  readonly userId?: string
-  readonly guildId?: string
   respond(choices: AutocompleteChoice[]): Promise<void>
 }
 
-export interface ButtonInteractionAdapter {
+export interface ButtonInteractionAdapter extends AdapterIdentity {
   readonly kind: 'button'
   readonly customId: string
-  readonly userId?: string
-  readonly guildId?: string
   update(input: ReplyInput): Promise<void>
   reply(input: ReplyInput): Promise<void>
   deferUpdate(): Promise<void>
   showModal(input: ModalSpec): Promise<void>
 }
 
-export interface SelectInteractionAdapter {
+export interface SelectInteractionAdapter extends AdapterIdentity {
   readonly kind: 'select'
   readonly customId: string
   readonly values: string[]
-  readonly userId?: string
-  readonly guildId?: string
   update(input: ReplyInput): Promise<void>
   reply(input: ReplyInput): Promise<void>
   deferUpdate(): Promise<void>
   showModal(input: ModalSpec): Promise<void>
 }
 
-export interface ModalInteractionAdapter {
+export interface ModalInteractionAdapter extends AdapterIdentity {
   readonly kind: 'modal'
   readonly customId: string
   readonly fields: Record<string, string>
-  readonly userId?: string
-  readonly guildId?: string
   reply(input: ReplyInput): Promise<void>
   defer(input?: DeferInput): Promise<void>
 }

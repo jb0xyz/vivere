@@ -10,6 +10,7 @@ import type {
 } from './types.js'
 import type {
   ButtonDescriptor,
+  CommandLocalizations,
   CommandDescriptor,
   ComponentDescriptor,
   EventDescriptor,
@@ -18,6 +19,7 @@ import type {
   ModalDescriptor,
   OptionDescriptor,
   ParamDescriptor,
+  PolicyDescriptor,
   SelectDescriptor,
   UserCommandDescriptor,
 } from './ir.js'
@@ -29,6 +31,7 @@ import type {
   MiddlewareInput,
 } from './middleware.js'
 import { defineMiddleware as createMiddleware } from './middleware.js'
+import type { PolicyDefinition } from './policies.js'
 import type { AutocompleteResolver, InferOptions, OptionsRecord } from './opt.js'
 import { createOpt } from './opt.js'
 import type { InferParams, ParamsRecord } from './param.js'
@@ -44,6 +47,7 @@ export interface ParamCodec {
 export interface CommandDefinition<TServices = unknown> {
   readonly descriptor: CommandDescriptor
   readonly middleware: AnyMiddlewareDefinition<TServices>[]
+  readonly policies: PolicyDefinition[]
   readonly autocomplete: Record<string, AutocompleteResolver<TServices>>
   readonly execute?: (ctx: CommandContext<Record<string, unknown>, TServices>) => Promise<void>
 }
@@ -57,12 +61,15 @@ export interface CommandInput<
   description: string
   options?: TOptions
   use?: TMiddlewareList
+  policies?: readonly PolicyDefinition[]
+  localizations?: CommandLocalizations
   execute?(ctx: CommandContext<InferOptions<TOptions>, TServices> & InferMiddlewareExtensions<TMiddlewareList>): Promise<void>
 }
 
 export interface UserCommandDefinition<TServices = unknown> {
   readonly descriptor: UserCommandDescriptor
   readonly middleware: AnyMiddlewareDefinition<TServices>[]
+  readonly policies: PolicyDefinition[]
   readonly execute: (ctx: UserCommandContext<TServices>) => Promise<void>
 }
 
@@ -72,12 +79,15 @@ export interface UserCommandInput<
 > {
   name: string
   use?: TMiddlewareList
+  policies?: readonly PolicyDefinition[]
+  localizations?: CommandLocalizations
   execute(ctx: UserCommandContext<TServices, User> & InferMiddlewareExtensions<TMiddlewareList>): Promise<void>
 }
 
 export interface MessageCommandDefinition<TServices = unknown> {
   readonly descriptor: MessageCommandDescriptor
   readonly middleware: AnyMiddlewareDefinition<TServices>[]
+  readonly policies: PolicyDefinition[]
   readonly execute: (ctx: MessageCommandContext<TServices>) => Promise<void>
 }
 
@@ -87,6 +97,8 @@ export interface MessageCommandInput<
 > {
   name: string
   use?: TMiddlewareList
+  policies?: readonly PolicyDefinition[]
+  localizations?: CommandLocalizations
   execute(ctx: MessageCommandContext<TServices, Message> & InferMiddlewareExtensions<TMiddlewareList>): Promise<void>
 }
 
@@ -115,6 +127,7 @@ export interface EventInput<
 export interface ButtonDefinition<TServices = unknown, TParams extends ParamsRecord = ParamsRecord> {
   readonly descriptor: ButtonDescriptor
   readonly middleware: AnyMiddlewareDefinition<TServices>[]
+  readonly policies: PolicyDefinition[]
   readonly codecs: Record<string, ParamCodec>
   readonly __params?: InferParams<TParams>
   readonly execute: (ctx: ButtonContext<Record<string, unknown>, TServices>) => Promise<void>
@@ -128,12 +141,14 @@ export interface ButtonInput<
   id: string
   params?: TParams
   use?: TMiddlewareList
+  policies?: readonly PolicyDefinition[]
   execute(ctx: ButtonContext<InferParams<TParams>, TServices> & InferMiddlewareExtensions<TMiddlewareList>): Promise<void>
 }
 
 export interface SelectDefinition<TServices = unknown, TParams extends ParamsRecord = ParamsRecord> {
   readonly descriptor: SelectDescriptor
   readonly middleware: AnyMiddlewareDefinition<TServices>[]
+  readonly policies: PolicyDefinition[]
   readonly codecs: Record<string, ParamCodec>
   readonly __params?: InferParams<TParams>
   readonly execute: (ctx: SelectContext<Record<string, unknown>, TServices>) => Promise<void>
@@ -147,6 +162,7 @@ export interface SelectInput<
   id: string
   params?: TParams
   use?: TMiddlewareList
+  policies?: readonly PolicyDefinition[]
   execute(ctx: SelectContext<InferParams<TParams>, TServices> & InferMiddlewareExtensions<TMiddlewareList>): Promise<void>
 }
 
@@ -157,6 +173,7 @@ export interface ModalDefinition<
 > {
   readonly descriptor: ModalDescriptor
   readonly middleware: AnyMiddlewareDefinition<TServices>[]
+  readonly policies: PolicyDefinition[]
   readonly codecs: Record<string, ParamCodec>
   readonly __params?: InferParams<TParams>
   readonly __fields?: InferFields<TFields>
@@ -173,6 +190,7 @@ export interface ModalInput<
   params?: TParams
   fields: TFields
   use?: TMiddlewareList
+  policies?: readonly PolicyDefinition[]
   execute(
     ctx: ModalContext<InferParams<TParams>, InferFields<TFields>, TServices> &
       InferMiddlewareExtensions<TMiddlewareList>,
@@ -230,6 +248,11 @@ function createMiddlewareNames<TServices>(middleware: readonly AnyMiddlewareDefi
   return middleware.map((item) => item.descriptor.name)
 }
 
+function createPolicyDescriptors(policies: readonly PolicyDefinition[] = []): PolicyDescriptor[] | undefined {
+  if (policies.length === 0) return undefined
+  return policies.map((policy) => policy.descriptor)
+}
+
 function createParamDescriptors(params: ParamsRecord): ParamDescriptor[] {
   return Object.entries(params).map(([name, node]) => ({
     name,
@@ -268,9 +291,12 @@ function createComponentDescriptor(
   id: string,
   params: ParamsRecord,
   middleware: readonly AnyMiddlewareDefinition[],
+  policies: readonly PolicyDefinition[],
   fields?: FieldsRecord,
 ): ComponentDescriptor {
   if (!/^[a-z0-9-]+$/.test(id)) throw new Error(`Invalid component id: ${id}`)
+  const middlewareNames = createMiddlewareNames(middleware)
+  const policyDescriptors = createPolicyDescriptors(policies)
 
   if (kind === 'button') {
     return {
@@ -278,7 +304,8 @@ function createComponentDescriptor(
       componentKind: kind,
       id,
       params: createParamDescriptors(params),
-      ...(createMiddlewareNames(middleware) ? { middleware: createMiddlewareNames(middleware) } : {}),
+      ...(middlewareNames ? { middleware: middlewareNames } : {}),
+      ...(policyDescriptors ? { policies: policyDescriptors } : {}),
     }
   }
 
@@ -288,7 +315,8 @@ function createComponentDescriptor(
       componentKind: kind,
       id,
       params: createParamDescriptors(params),
-      ...(createMiddlewareNames(middleware) ? { middleware: createMiddlewareNames(middleware) } : {}),
+      ...(middlewareNames ? { middleware: middlewareNames } : {}),
+      ...(policyDescriptors ? { policies: policyDescriptors } : {}),
     }
   }
 
@@ -298,7 +326,8 @@ function createComponentDescriptor(
     id,
     params: createParamDescriptors(params),
     fields: createFieldDescriptors(fields ?? {}),
-    ...(createMiddlewareNames(middleware) ? { middleware: createMiddlewareNames(middleware) } : {}),
+    ...(middlewareNames ? { middleware: middlewareNames } : {}),
+    ...(policyDescriptors ? { policies: policyDescriptors } : {}),
   }
 }
 
@@ -313,19 +342,25 @@ export function createVivere<TServices>() {
   ): CommandDefinition<TServices> {
     const options = input.options ?? ({} as TOptions)
     const middleware = [...(input.use ?? [])] as AnyMiddlewareDefinition<TServices>[]
+    const policies = [...(input.policies ?? [])]
+    const middlewareNames = createMiddlewareNames(middleware)
+    const policyDescriptors = createPolicyDescriptors(policies)
     const descriptor: CommandDescriptor = {
       kind: 'command',
       name: input.name,
       description: input.description,
       route: [input.name],
       options: createOptionDescriptors(options),
-      ...(createMiddlewareNames(middleware) ? { middleware: createMiddlewareNames(middleware) } : {}),
+      ...(middlewareNames ? { middleware: middlewareNames } : {}),
+      ...(policyDescriptors ? { policies: policyDescriptors } : {}),
+      ...(input.localizations ? { localizations: input.localizations } : {}),
     }
     const autocomplete = createAutocompleteResolvers(options)
-    if (!input.execute) return { descriptor, middleware, autocomplete }
+    if (!input.execute) return { descriptor, middleware, policies, autocomplete }
     return {
       descriptor,
       middleware,
+      policies,
       autocomplete,
       execute: input.execute as NonNullable<CommandDefinition<TServices>['execute']>,
     }
@@ -352,14 +387,20 @@ export function createVivere<TServices>() {
     input: UserCommandInput<TServices, TMiddlewareList>,
   ): UserCommandDefinition<TServices> {
     const middleware = [...(input.use ?? [])] as AnyMiddlewareDefinition<TServices>[]
+    const policies = [...(input.policies ?? [])]
+    const middlewareNames = createMiddlewareNames(middleware)
+    const policyDescriptors = createPolicyDescriptors(policies)
     const descriptor: UserCommandDescriptor = {
       kind: 'userCommand',
       name: input.name,
-      ...(createMiddlewareNames(middleware) ? { middleware: createMiddlewareNames(middleware) } : {}),
+      ...(middlewareNames ? { middleware: middlewareNames } : {}),
+      ...(policyDescriptors ? { policies: policyDescriptors } : {}),
+      ...(input.localizations ? { localizations: input.localizations } : {}),
     }
     return {
       descriptor,
       middleware,
+      policies,
       execute: input.execute as UserCommandDefinition<TServices>['execute'],
     }
   }
@@ -368,14 +409,20 @@ export function createVivere<TServices>() {
     input: MessageCommandInput<TServices, TMiddlewareList>,
   ): MessageCommandDefinition<TServices> {
     const middleware = [...(input.use ?? [])] as AnyMiddlewareDefinition<TServices>[]
+    const policies = [...(input.policies ?? [])]
+    const middlewareNames = createMiddlewareNames(middleware)
+    const policyDescriptors = createPolicyDescriptors(policies)
     const descriptor: MessageCommandDescriptor = {
       kind: 'messageCommand',
       name: input.name,
-      ...(createMiddlewareNames(middleware) ? { middleware: createMiddlewareNames(middleware) } : {}),
+      ...(middlewareNames ? { middleware: middlewareNames } : {}),
+      ...(policyDescriptors ? { policies: policyDescriptors } : {}),
+      ...(input.localizations ? { localizations: input.localizations } : {}),
     }
     return {
       descriptor,
       middleware,
+      policies,
       execute: input.execute as MessageCommandDefinition<TServices>['execute'],
     }
   }
@@ -388,10 +435,12 @@ export function createVivere<TServices>() {
   ): ButtonDefinition<TServices, TParams> {
     const params = input.params ?? ({} as TParams)
     const middleware = [...(input.use ?? [])] as AnyMiddlewareDefinition<TServices>[]
+    const policies = [...(input.policies ?? [])]
 
     return {
-      descriptor: createComponentDescriptor('button', input.id, params, middleware) as ButtonDescriptor,
+      descriptor: createComponentDescriptor('button', input.id, params, middleware, policies) as ButtonDescriptor,
       middleware,
+      policies,
       codecs: createParamCodecs(params),
       execute: input.execute as ButtonDefinition<TServices, TParams>['execute'],
     }
@@ -405,10 +454,12 @@ export function createVivere<TServices>() {
   ): SelectDefinition<TServices, TParams> {
     const params = input.params ?? ({} as TParams)
     const middleware = [...(input.use ?? [])] as AnyMiddlewareDefinition<TServices>[]
+    const policies = [...(input.policies ?? [])]
 
     return {
-      descriptor: createComponentDescriptor('select', input.id, params, middleware) as SelectDescriptor,
+      descriptor: createComponentDescriptor('select', input.id, params, middleware, policies) as SelectDescriptor,
       middleware,
+      policies,
       codecs: createParamCodecs(params),
       execute: input.execute as SelectDefinition<TServices, TParams>['execute'],
     }
@@ -421,10 +472,12 @@ export function createVivere<TServices>() {
   >(input: ModalInput<TParams, TFields, TServices, TMiddlewareList>): ModalDefinition<TServices, TParams, TFields> {
     const params = input.params ?? ({} as TParams)
     const middleware = [...(input.use ?? [])] as AnyMiddlewareDefinition<TServices>[]
+    const policies = [...(input.policies ?? [])]
 
     return {
-      descriptor: createComponentDescriptor('modal', input.id, params, middleware, input.fields) as ModalDescriptor,
+      descriptor: createComponentDescriptor('modal', input.id, params, middleware, policies, input.fields) as ModalDescriptor,
       middleware,
+      policies,
       codecs: createParamCodecs(params),
       execute: input.execute as ModalDefinition<TServices, TParams, TFields>['execute'],
     }

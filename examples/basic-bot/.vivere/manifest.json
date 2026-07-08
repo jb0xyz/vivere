@@ -57,6 +57,13 @@
       "options": [],
       "middleware": [
         "log"
+      ],
+      "policies": [
+        {
+          "type": "cooldown",
+          "scope": "user",
+          "windowMs": 5000
+        }
       ]
     },
     {

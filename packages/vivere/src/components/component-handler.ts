@@ -5,7 +5,7 @@ import type {
   SelectDefinition,
 } from '../authoring/create-vivere.js'
 import type { AnyMiddlewareDefinition } from '../authoring/middleware.js'
-import type { ButtonContext, ComponentsBuilder, ModalContext, SelectContext } from '../authoring/types.js'
+import type { ButtonContext, ComponentsBuilder, InteractionMember, ModalContext, SelectContext } from '../authoring/types.js'
 import type { ErrorReporter } from '../internal/errors.js'
 import { reportError as defaultReportError } from '../internal/errors.js'
 import { runWithMiddleware } from '../runtime/middleware.js'
@@ -14,6 +14,7 @@ import { createStorePorts } from '../stores/memory.js'
 import type { StorePorts } from '../stores/types.js'
 import { getDurationMs, ignoreVivereEvent } from '../internal/observability.js'
 import type { VivereEventSink } from '../internal/observability.js'
+import { enforcePolicies } from '../runtime/policies.js'
 import { createComponentsBuilder, createModalSpec } from './component-builder.js'
 import { decodeCustomId } from './custom-id.js'
 
@@ -117,6 +118,8 @@ export async function handleComponent<TServices>(
     const identity = {
       userId: adapter.userId ?? 'unknown',
       ...(adapter.guildId ? { guildId: adapter.guildId } : {}),
+      ...(adapter.locale ? { locale: adapter.locale } : {}),
+      ...(adapter.member ? { member: adapter.member as InteractionMember } : {}),
     }
 
     if (isModalDefinition(component)) {
@@ -136,7 +139,13 @@ export async function handleComponent<TServices>(
       const result = await runWithMiddleware({
         ctx,
         middleware,
-        execute: (nextCtx) => component.execute(nextCtx),
+        execute: async (nextCtx) => {
+          await enforcePolicies(nextCtx, component.policies, {
+            kind: 'component',
+            id: `${component.descriptor.componentKind}:${component.descriptor.id}`,
+          })
+          await component.execute(nextCtx)
+        },
         reportError,
         errorContext: { phase: 'component', kind: component.descriptor.componentKind, id: component.descriptor.id },
         replyUserError: (input) => adapter.reply(input),
@@ -178,7 +187,13 @@ export async function handleComponent<TServices>(
       const result = await runWithMiddleware({
         ctx,
         middleware,
-        execute: (nextCtx) => component.execute(nextCtx),
+        execute: async (nextCtx) => {
+          await enforcePolicies(nextCtx, component.policies, {
+            kind: 'component',
+            id: `${component.descriptor.componentKind}:${component.descriptor.id}`,
+          })
+          await component.execute(nextCtx)
+        },
         reportError,
         errorContext: { phase: 'component', kind: component.descriptor.componentKind, id: component.descriptor.id },
         replyUserError: (input) => adapter.reply(input),
@@ -200,7 +215,13 @@ export async function handleComponent<TServices>(
       const result = await runWithMiddleware({
         ctx: baseCtx,
         middleware,
-        execute: (nextCtx) => component.execute(nextCtx),
+        execute: async (nextCtx) => {
+          await enforcePolicies(nextCtx, component.policies, {
+            kind: 'component',
+            id: `${component.descriptor.componentKind}:${component.descriptor.id}`,
+          })
+          await component.execute(nextCtx)
+        },
         reportError,
         errorContext: { phase: 'component', kind: component.descriptor.componentKind, id: component.descriptor.id },
         replyUserError: (input) => adapter.reply(input),

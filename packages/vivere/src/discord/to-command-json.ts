@@ -1,8 +1,26 @@
 import { ApplicationCommandType } from 'discord.js'
 import type { APIApplicationCommandOption, RESTPostAPIApplicationCommandsJSONBody } from 'discord.js'
 import { ApplicationCommandOptionType } from 'discord.js'
-import type { ApplicationCommandDescriptor, CommandDescriptor } from '../authoring/ir.js'
+import type { ApplicationCommandDescriptor, CommandDescriptor, CommandLocalizations } from '../authoring/ir.js'
 import { DISCORD_OPTION_KIND } from './option-kinds.js'
+
+function getNameLocalizations(localizations: CommandLocalizations | undefined): Record<string, string> | undefined {
+  const entries: Array<[string, string]> = []
+  for (const [locale, value] of Object.entries(localizations ?? {})) {
+    if (value.name !== undefined) entries.push([locale, value.name])
+  }
+  if (entries.length === 0) return undefined
+  return Object.fromEntries(entries)
+}
+
+function getDescriptionLocalizations(localizations: CommandLocalizations | undefined): Record<string, string> | undefined {
+  const entries: Array<[string, string]> = []
+  for (const [locale, value] of Object.entries(localizations ?? {})) {
+    if (value.description !== undefined) entries.push([locale, value.description])
+  }
+  if (entries.length === 0) return undefined
+  return Object.fromEntries(entries)
+}
 
 function serializeCommandOptions(descriptor: CommandDescriptor): APIApplicationCommandOption[] {
   return descriptor.options
@@ -22,6 +40,12 @@ export function toCommandJSON(descriptor: CommandDescriptor): RESTPostAPIApplica
     description: descriptor.description,
     type: ApplicationCommandType.ChatInput,
     options: serializeCommandOptions(descriptor),
+    ...(getNameLocalizations(descriptor.localizations)
+      ? { name_localizations: getNameLocalizations(descriptor.localizations) }
+      : {}),
+    ...(getDescriptionLocalizations(descriptor.localizations)
+      ? { description_localizations: getDescriptionLocalizations(descriptor.localizations) }
+      : {}),
   }
 }
 
@@ -31,6 +55,12 @@ function createSubcommand(descriptor: CommandDescriptor): APIApplicationCommandO
     description: descriptor.description,
     type: ApplicationCommandOptionType.Subcommand,
     options: serializeCommandOptions(descriptor),
+    ...(getNameLocalizations(descriptor.localizations)
+      ? { name_localizations: getNameLocalizations(descriptor.localizations) }
+      : {}),
+    ...(getDescriptionLocalizations(descriptor.localizations)
+      ? { description_localizations: getDescriptionLocalizations(descriptor.localizations) }
+      : {}),
   } as APIApplicationCommandOption
 }
 
@@ -43,6 +73,9 @@ function toContextCommandJSON(descriptor: ApplicationCommandDescriptor): RESTPos
     return {
       name: descriptor.name,
       type: ApplicationCommandType.User,
+      ...(getNameLocalizations(descriptor.localizations)
+        ? { name_localizations: getNameLocalizations(descriptor.localizations) }
+        : {}),
     }
   }
 
@@ -50,6 +83,9 @@ function toContextCommandJSON(descriptor: ApplicationCommandDescriptor): RESTPos
     return {
       name: descriptor.name,
       type: ApplicationCommandType.Message,
+      ...(getNameLocalizations(descriptor.localizations)
+        ? { name_localizations: getNameLocalizations(descriptor.localizations) }
+        : {}),
     }
   }
 
@@ -96,6 +132,12 @@ export function buildCommandTree(descriptors: ApplicationCommandDescriptor[]): R
         name: group.name,
         description: group.description,
         type: ApplicationCommandOptionType.SubcommandGroup,
+        ...(getNameLocalizations(group.localizations)
+          ? { name_localizations: getNameLocalizations(group.localizations) }
+          : {}),
+        ...(getDescriptionLocalizations(group.localizations)
+          ? { description_localizations: getDescriptionLocalizations(group.localizations) }
+          : {}),
         options: slashDescriptorList
           .filter((descriptor) =>
             descriptor.route.length === 3 &&
@@ -111,6 +153,10 @@ export function buildCommandTree(descriptors: ApplicationCommandDescriptor[]): R
       description: root.description,
       type: ApplicationCommandType.ChatInput,
       options: [...subcommandList, ...groupList],
+      ...(getNameLocalizations(root.localizations) ? { name_localizations: getNameLocalizations(root.localizations) } : {}),
+      ...(getDescriptionLocalizations(root.localizations)
+        ? { description_localizations: getDescriptionLocalizations(root.localizations) }
+        : {}),
     }
   })
 

@@ -7,7 +7,7 @@ import type {
   UserCommandDefinition,
 } from '../authoring/create-vivere.js'
 import type { AnyMiddlewareDefinition } from '../authoring/middleware.js'
-import type { CommandContext, MessageCommandContext, UserCommandContext } from '../authoring/types.js'
+import type { CommandContext, InteractionMember, MessageCommandContext, UserCommandContext } from '../authoring/types.js'
 import type { ComponentRegistry } from '../components/component-handler.js'
 import { getComponentRegistryKey, handleComponent } from '../components/component-handler.js'
 import { createComponentsBuilder, createModalSpec } from '../components/component-builder.js'
@@ -20,7 +20,9 @@ import type { StorePorts } from '../stores/types.js'
 import { getDurationMs, ignoreVivereEvent } from '../internal/observability.js'
 import type { VivereEventSink } from '../internal/observability.js'
 import { runWithMiddleware } from './middleware.js'
+import { enforcePolicies } from './policies.js'
 import type {
+  AdapterIdentity,
   AutocompleteInteractionAdapter,
   ChatInputInteractionAdapter,
   InteractionAdapter,
@@ -79,10 +81,12 @@ export function createRouter<TServices>(options: CreateRouterOptions<TServices>)
     return [...globalMiddleware, ...(definition.middleware ?? [])]
   }
 
-  function getIdentity(adapter: { userId?: string; guildId?: string }) {
+  function getIdentity(adapter: AdapterIdentity) {
     return {
       userId: adapter.userId ?? 'unknown',
       ...(adapter.guildId ? { guildId: adapter.guildId } : {}),
+      ...(adapter.locale ? { locale: adapter.locale } : {}),
+      ...(adapter.member ? { member: adapter.member as InteractionMember } : {}),
     }
   }
 
@@ -117,7 +121,10 @@ export function createRouter<TServices>(options: CreateRouterOptions<TServices>)
       const result = await runWithMiddleware({
         ctx,
         middleware: getMiddleware(command),
-        execute: (nextCtx) => command.execute?.(nextCtx) ?? Promise.resolve(),
+        execute: async (nextCtx) => {
+          await enforcePolicies(nextCtx, command.policies, { kind: 'command', id: routeKey })
+          await command.execute?.(nextCtx)
+        },
         reportError,
         errorContext: { phase: 'command', id: routeKey },
         replyUserError: (input) => adapter.reply(input),
@@ -186,7 +193,10 @@ export function createRouter<TServices>(options: CreateRouterOptions<TServices>)
       const result = await runWithMiddleware({
         ctx,
         middleware: getMiddleware(command),
-        execute: (nextCtx) => command.execute(nextCtx),
+        execute: async (nextCtx) => {
+          await enforcePolicies(nextCtx, command.policies, { kind: 'command', id: `userCommand:${adapter.commandName}` })
+          await command.execute(nextCtx)
+        },
         reportError,
         errorContext: { phase: 'command', kind: 'userCommand', id: adapter.commandName },
         replyUserError: (input) => adapter.reply(input),
@@ -225,7 +235,13 @@ export function createRouter<TServices>(options: CreateRouterOptions<TServices>)
       const result = await runWithMiddleware({
         ctx,
         middleware: getMiddleware(command),
-        execute: (nextCtx) => command.execute(nextCtx),
+        execute: async (nextCtx) => {
+          await enforcePolicies(nextCtx, command.policies, {
+            kind: 'command',
+            id: `messageCommand:${adapter.commandName}`,
+          })
+          await command.execute(nextCtx)
+        },
         reportError,
         errorContext: { phase: 'command', kind: 'messageCommand', id: adapter.commandName },
         replyUserError: (input) => adapter.reply(input),

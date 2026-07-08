@@ -23,6 +23,8 @@ export type {
 export type {
   ApplicationCommandDescriptor,
   ButtonDescriptor,
+  CommandLocalization,
+  CommandLocalizations,
   CommandDescriptor,
   ComponentDescriptor,
   EventDescriptor,
@@ -31,6 +33,8 @@ export type {
   ModalDescriptor,
   OptionDescriptor,
   ParamDescriptor,
+  PolicyDescriptor,
+  PolicyScope,
   SelectDescriptor,
   UserCommandDescriptor,
 } from './authoring/ir.js'
@@ -45,6 +49,13 @@ export type {
   MiddlewareInput,
   MiddlewareNext,
 } from './authoring/middleware.js'
+export { cooldown, rateLimit, requirePermission, requireRole } from './authoring/policies.js'
+export type {
+  CooldownPolicyInput,
+  PolicyDefinition,
+  PolicyTarget,
+  RateLimitPolicyInput,
+} from './authoring/policies.js'
 export { opt } from './authoring/opt.js'
 export type {
   AutocompleteResolver,
@@ -75,6 +86,7 @@ export type {
   ComponentsBuilder,
   EventContext,
   InteractionIdentity,
+  InteractionMember,
   MessageCommandContext,
   ModalContext,
   ModalDefinitionForParams,

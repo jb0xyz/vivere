@@ -23,6 +23,10 @@ test('builds deterministic manifests without function fields', () => {
     name: 'ask',
     description: 'Ask',
     use: [auditMiddleware],
+    localizations: {
+      ja: { name: 'ask-ja' },
+      ko: { name: 'ask-ko', description: 'ask-ko-description' },
+    },
     options: {
       targetUser: opt.user('target'),
       query: opt.string('query').autocomplete(async () => []),
@@ -78,6 +82,10 @@ test('builds deterministic manifests without function fields', () => {
         description: 'Ask',
         route: ['ask'],
         middleware: ['audit'],
+        localizations: {
+          ja: { name: 'ask-ja' },
+          ko: { name: 'ask-ko', description: 'ask-ko-description' },
+        },
         options: [
           {
             property: 'query',

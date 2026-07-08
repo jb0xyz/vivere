@@ -6,9 +6,13 @@ import {
   createMemoryKeyValueStore,
   createMemoryRateLimitStore,
   createVivere,
+  cooldown,
   defineConfig,
   opt,
   param,
+  rateLimit,
+  requirePermission,
+  requireRole,
 } from './index.js'
 import type {
   ActionRowSpec,
@@ -20,6 +24,8 @@ import type {
   ButtonInput,
   ButtonSpec,
   ButtonStyleName,
+  CommandLocalization,
+  CommandLocalizations,
   CommandContext,
   CommandDefinition,
   CommandDescriptor,
@@ -37,6 +43,7 @@ import type {
   InferOptions,
   InferParams,
   InteractionIdentity,
+  InteractionMember,
   KeyValueSetOptions,
   KeyValueStore,
   MiddlewareContext,
@@ -48,6 +55,10 @@ import type {
   OptionNode,
   ParamKind,
   ParamNode,
+  PolicyDefinition,
+  PolicyDescriptor,
+  PolicyScope,
+  PolicyTarget,
   RateLimitResult,
   RateLimitStore,
   ReplyInput,
@@ -74,6 +85,10 @@ expectTypeOf(createMemoryRateLimitStore).toBeFunction()
 expectTypeOf(defineConfig).toBeFunction()
 expectTypeOf(opt.string).toBeFunction()
 expectTypeOf(param.snowflake).toBeFunction()
+expectTypeOf(requirePermission).toBeFunction()
+expectTypeOf(requireRole).toBeFunction()
+expectTypeOf(cooldown).toBeFunction()
+expectTypeOf(rateLimit).toBeFunction()
 expectTypeOf(GatewayIntentBits.Guilds).toBeNumber()
 expectTypeOf(VivereUserError).toBeConstructibleWith('message')
 
@@ -87,6 +102,8 @@ export type PublicTypes = [
   ButtonInput<Record<string, never>, unknown>,
   ButtonSpec,
   ButtonStyleName,
+  CommandLocalization,
+  CommandLocalizations,
   CommandContext<Record<string, never>, unknown>,
   CommandDefinition,
   CommandDescriptor,
@@ -104,6 +121,7 @@ export type PublicTypes = [
   InferOptions<Record<string, never>>,
   InferParams<Record<string, never>>,
   InteractionIdentity,
+  InteractionMember,
   KeyValueSetOptions,
   KeyValueStore,
   MiddlewareContext<unknown>,
@@ -115,6 +133,10 @@ export type PublicTypes = [
   OptionNode<unknown, 'required'>,
   ParamKind,
   ParamNode<unknown>,
+  PolicyDefinition,
+  PolicyDescriptor,
+  PolicyScope,
+  PolicyTarget,
   RateLimitResult,
   RateLimitStore,
   ReplyInput,

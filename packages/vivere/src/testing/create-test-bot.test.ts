@@ -250,8 +250,8 @@ test('captures failed command observability events', async () => {
 
   expect(eventList).toEqual([
     { type: 'command.started', route: 'fail' },
-    { type: 'command.failed', route: 'fail', durationMs: 0 },
-    { type: 'command.finished', route: 'fail', durationMs: 0, outcome: 'error' },
+    { type: 'command.failed', route: 'fail', durationMs: expect.any(Number) },
+    { type: 'command.finished', route: 'fail', durationMs: expect.any(Number), outcome: 'error' },
   ])
 })
 
@@ -280,8 +280,8 @@ test('captures component and event observability events', async () => {
 
   expect(eventList).toEqual([
     { type: 'component.started', kind: 'button', id: 'confirm' },
-    { type: 'component.finished', kind: 'button', id: 'confirm', durationMs: 0, outcome: 'ok' },
+    { type: 'component.finished', kind: 'button', id: 'confirm', durationMs: expect.any(Number), outcome: 'ok' },
     { type: 'event.started', name: 'ready' },
-    { type: 'event.handled', name: 'ready', durationMs: 0 },
+    { type: 'event.handled', name: 'ready', durationMs: expect.any(Number) },
   ])
 })

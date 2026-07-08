@@ -1,5 +1,8 @@
 import type { ButtonDescriptor, ModalDescriptor, SelectDescriptor } from './ir.js'
+import type { InteractionIdentity } from './interaction-identity.js'
 import type { StorePorts } from '../stores/types.js'
+
+export type { InteractionIdentity, InteractionMember } from './interaction-identity.js'
 
 export type ButtonStyleName = 'primary' | 'secondary' | 'success' | 'danger'
 export type ModalFieldStyleName = 'short' | 'paragraph'
@@ -7,11 +10,6 @@ export interface AutocompleteChoice {
   name: string
   value: string
 }
-export interface InteractionIdentity {
-  userId: string
-  guildId?: string
-}
-
 export interface AutocompleteContext<TServices> extends InteractionIdentity {
   services: TServices
   stores: StorePorts

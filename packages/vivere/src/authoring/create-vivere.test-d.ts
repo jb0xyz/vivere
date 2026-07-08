@@ -94,6 +94,8 @@ const demoCommand = defineCommand({
     expectTypeOf(ctx.options.query).toEqualTypeOf<string>()
     expectTypeOf(ctx.services).toEqualTypeOf<Services>()
     expectTypeOf(ctx.stores.rateLimit).toEqualTypeOf<RateLimitStore>()
+    expectTypeOf(ctx.locale).toEqualTypeOf<string | undefined>()
+    expectTypeOf(ctx.member).toEqualTypeOf<{ roles: string[]; permissions: string[] } | undefined>()
     ctx.components.button(confirmButton, {
       params: { userId: '123456789012345678', silent: false, mode: 'approve' },
       label: 'Confirm',
