@@ -15,6 +15,8 @@ import { getApplicationCommandKey } from '../internal/application-command-key.js
 import { createRegistry } from '../internal/collections.js'
 import type { ErrorReporter } from '../internal/errors.js'
 import { reportError as defaultReportError } from '../internal/errors.js'
+import { createStorePorts } from '../stores/memory.js'
+import type { StorePorts } from '../stores/types.js'
 import { runWithMiddleware } from './middleware.js'
 import type {
   AutocompleteInteractionAdapter,
@@ -26,6 +28,7 @@ import type {
 
 export interface DispatchDeps<TServices> {
   services: TServices
+  stores?: StorePorts
 }
 
 export interface CreateRouterOptions<TServices> {
@@ -34,6 +37,7 @@ export interface CreateRouterOptions<TServices> {
   components?: ComponentDefinition<TServices>[]
   middleware?: AnyMiddlewareDefinition<TServices>[]
   secret: string
+  stores?: StorePorts
   reportError?: ErrorReporter
 }
 
@@ -65,6 +69,7 @@ export function createRouter<TServices>(options: CreateRouterOptions<TServices>)
   const components = createComponentsBuilder(options.secret)
   const reportError = options.reportError ?? defaultReportError
   const globalMiddleware = options.middleware ?? []
+  const stores = options.stores ?? createStorePorts()
 
   function getMiddleware(definition: { middleware?: AnyMiddlewareDefinition<TServices>[] }) {
     return [...globalMiddleware, ...(definition.middleware ?? [])]
@@ -75,6 +80,10 @@ export function createRouter<TServices>(options: CreateRouterOptions<TServices>)
       userId: adapter.userId ?? 'unknown',
       ...(adapter.guildId ? { guildId: adapter.guildId } : {}),
     }
+  }
+
+  function getStores(deps: DispatchDeps<TServices>) {
+    return deps.stores ?? stores
   }
 
   async function dispatchCommand(adapter: ChatInputInteractionAdapter, deps: DispatchDeps<TServices>): Promise<void> {
@@ -90,6 +99,7 @@ export function createRouter<TServices>(options: CreateRouterOptions<TServices>)
     const ctx: CommandContext<Record<string, unknown>, TServices> = {
       options: resolvedOptions,
       services: deps.services,
+      stores: getStores(deps),
       ...getIdentity(adapter),
       components,
       reply: (input) => adapter.reply(input),
@@ -122,6 +132,7 @@ export function createRouter<TServices>(options: CreateRouterOptions<TServices>)
       const choices = await resolver(
         {
           services: deps.services,
+          stores: getStores(deps),
           value: adapter.focusedValue,
           ...getIdentity(adapter),
         },
@@ -143,6 +154,7 @@ export function createRouter<TServices>(options: CreateRouterOptions<TServices>)
 
     const ctx: UserCommandContext<TServices> = {
       services: deps.services,
+      stores: getStores(deps),
       targetUser: adapter.targetUser,
       ...getIdentity(adapter),
       reply: (input) => adapter.reply(input),
@@ -168,6 +180,7 @@ export function createRouter<TServices>(options: CreateRouterOptions<TServices>)
 
     const ctx: MessageCommandContext<TServices> = {
       services: deps.services,
+      stores: getStores(deps),
       targetMessage: adapter.targetMessage,
       ...getIdentity(adapter),
       reply: (input) => adapter.reply(input),
@@ -206,6 +219,7 @@ export function createRouter<TServices>(options: CreateRouterOptions<TServices>)
             registry: componentRegistry,
             secret: options.secret,
             deps,
+            stores: getStores(deps),
             components,
             middleware: globalMiddleware,
             reportError,

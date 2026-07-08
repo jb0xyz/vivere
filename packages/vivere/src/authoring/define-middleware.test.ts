@@ -135,3 +135,28 @@ test('applies global middleware to events', async () => {
   expect(log).toHaveBeenNthCalledWith(1, 'before')
   expect(log).toHaveBeenNthCalledWith(2, 'after')
 })
+
+test('exposes stores to middleware', async () => {
+  const limit = defineMiddleware({
+    name: 'limit',
+    async before(ctx, next) {
+      const result = await ctx.stores.rateLimit.increment(ctx.userId, 1000)
+      return next({ count: result.count })
+    },
+  })
+  const command = defineCommand({
+    name: 'limited',
+    description: 'Limited',
+    use: [limit],
+    async execute(ctx) {
+      await ctx.reply({ content: String(ctx.count) })
+    },
+  })
+  const bot = createTestBot({ commands: [command], services: { logger: { info() {} } } })
+
+  const first = await bot.command('limited').run({ options: {}, userId: 'user-1' })
+  const second = await bot.command('limited').run({ options: {}, userId: 'user-1' })
+
+  expect(first.replies).toEqual([{ content: '1' }])
+  expect(second.replies).toEqual([{ content: '2' }])
+})

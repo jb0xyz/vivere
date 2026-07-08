@@ -3,6 +3,8 @@ import {
   GatewayIntentBits,
   VivereUserError,
   createApp,
+  createMemoryKeyValueStore,
+  createMemoryRateLimitStore,
   createVivere,
   defineConfig,
   opt,
@@ -35,6 +37,8 @@ import type {
   InferOptions,
   InferParams,
   InteractionIdentity,
+  KeyValueSetOptions,
+  KeyValueStore,
   MiddlewareContext,
   MiddlewareDefinition,
   MiddlewareDescriptor,
@@ -44,6 +48,8 @@ import type {
   OptionNode,
   ParamKind,
   ParamNode,
+  RateLimitResult,
+  RateLimitStore,
   ReplyInput,
   SelectContext,
   SelectDefinition,
@@ -52,11 +58,15 @@ import type {
   SelectInput,
   SelectOptionSpec,
   SelectSpec,
+  StoreInput,
+  StorePorts,
   VivereConfig,
 } from './index.js'
 
 expectTypeOf(createVivere).toBeFunction()
 expectTypeOf(createApp).toBeFunction()
+expectTypeOf(createMemoryKeyValueStore).toBeFunction()
+expectTypeOf(createMemoryRateLimitStore).toBeFunction()
 expectTypeOf(defineConfig).toBeFunction()
 expectTypeOf(opt.string).toBeFunction()
 expectTypeOf(param.snowflake).toBeFunction()
@@ -90,6 +100,8 @@ export type PublicTypes = [
   InferOptions<Record<string, never>>,
   InferParams<Record<string, never>>,
   InteractionIdentity,
+  KeyValueSetOptions,
+  KeyValueStore,
   MiddlewareContext<unknown>,
   MiddlewareDefinition,
   MiddlewareDescriptor,
@@ -99,6 +111,8 @@ export type PublicTypes = [
   OptionNode<unknown, 'required'>,
   ParamKind,
   ParamNode<unknown>,
+  RateLimitResult,
+  RateLimitStore,
   ReplyInput,
   SelectContext<Record<string, never>, unknown>,
   SelectDefinition,
@@ -107,6 +121,8 @@ export type PublicTypes = [
   SelectInput<Record<string, never>, unknown>,
   SelectOptionSpec,
   SelectSpec,
+  StoreInput,
+  StorePorts,
   VivereConfig,
 ]
 

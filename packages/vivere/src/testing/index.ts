@@ -22,6 +22,8 @@ import type {
 import { reportError as defaultReportError } from '../internal/errors.js'
 import { runWithMiddleware } from '../runtime/middleware.js'
 import { createRouter } from '../runtime/router.js'
+import { createStorePorts } from '../stores/memory.js'
+import type { StoreInput } from '../stores/types.js'
 
 export type TestReply = Exclude<ReplyInput, string>
 
@@ -40,6 +42,7 @@ export interface CreateTestBotInput<TServices> {
   middleware?: AnyMiddlewareDefinition<TServices>[]
   services?: TServices
   createServices?: () => TServices | Promise<TServices>
+  stores?: StoreInput
   reportError?: ErrorReporter
 }
 
@@ -378,17 +381,19 @@ export function createTestBot<TServices = unknown>(input: CreateTestBotInput<TSe
   const eventList = getEventList(input)
   const createServices = createServicesFactory(input)
   const reportError = input.reportError ?? defaultReportError
+  const stores = createStorePorts(input.stores)
   const router = createRouter({
     commands: commandList,
     components: componentList,
     middleware: input.middleware,
     secret: TEST_SECRET,
+    stores,
     reportError,
   })
 
   async function dispatch(adapter: Parameters<typeof router.dispatch>[0], capture: TestRunResult): Promise<TestRunResult> {
     const services = await createServices()
-    await router.dispatch(adapter, { services })
+    await router.dispatch(adapter, { services, stores })
     return capture
   }
 
@@ -464,7 +469,7 @@ export function createTestBot<TServices = unknown>(input: CreateTestBotInput<TSe
         choices,
       )
       const services = await createServices()
-      await router.dispatch(adapter, { services })
+      await router.dispatch(adapter, { services, stores })
       return choices
     },
     event(name) {
@@ -476,7 +481,7 @@ export function createTestBot<TServices = unknown>(input: CreateTestBotInput<TSe
               .filter((event) => String(event.descriptor.name) === name)
               .map((event) =>
                 runWithMiddleware({
-                  ctx: { services, client: {}, userId: 'system' },
+                  ctx: { services, stores, client: {}, userId: 'system' },
                   middleware: [...(input.middleware ?? []), ...event.middleware],
                   execute: (nextCtx) => event.execute(nextCtx, ...args),
                   reportError,

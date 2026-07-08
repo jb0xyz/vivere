@@ -97,5 +97,14 @@ export type {
   AppDiscoveryConfig,
   CreateAppOptions,
 } from './runtime/create-app.js'
+export { createMemoryKeyValueStore, createMemoryRateLimitStore } from './stores/memory.js'
+export type {
+  KeyValueSetOptions,
+  KeyValueStore,
+  RateLimitResult,
+  RateLimitStore,
+  StoreInput,
+  StorePorts,
+} from './stores/types.js'
 export type { ErrorContext, ErrorPhase, ErrorReporter } from './internal/errors.js'
 export { GatewayIntentBits } from 'discord.js'

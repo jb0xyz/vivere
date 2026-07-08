@@ -178,3 +178,26 @@ test('emits event handlers with services', async () => {
 
   expect(logger.info).toHaveBeenCalledWith('ready')
 })
+
+test('exposes injected stores to handlers through the test bot', async () => {
+  const kv = {
+    get: vi.fn(async () => 'stored'),
+    set: vi.fn(async () => {}),
+    delete: vi.fn(async () => {}),
+  }
+  const remember = defineCommand({
+    name: 'remember',
+    description: 'Remember',
+    async execute(ctx) {
+      await ctx.stores.kv.set(`seen:${ctx.userId}`, 'yes')
+      await ctx.reply({ content: (await ctx.stores.kv.get(`seen:${ctx.userId}`)) ?? 'no' })
+    },
+  })
+  const bot = createTestBot({ commands: [remember], services: { logger: { info() {} } }, stores: { kv } })
+
+  const result = await bot.command('remember').run({ options: {}, userId: 'user-1' })
+
+  expect(kv.set).toHaveBeenCalledWith('seen:user-1', 'yes')
+  expect(kv.get).toHaveBeenCalledWith('seen:user-1')
+  expect(result.replies).toEqual([{ content: 'stored' }])
+})

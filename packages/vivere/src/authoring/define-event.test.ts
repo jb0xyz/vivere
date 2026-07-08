@@ -1,5 +1,6 @@
 import { describe, expect, test, vi } from 'vitest'
 import { createVivere } from './create-vivere.js'
+import { createStorePorts } from '../stores/memory.js'
 
 const { defineEvent } = createVivere<{ n: number }>()
 
@@ -18,7 +19,10 @@ describe('defineEvent', () => {
       execute: spy,
     })
 
-    await event.execute({ services: { n: 1 }, client: {} as never, userId: 'system' }, { id: 'member-1' })
+    await event.execute(
+      { services: { n: 1 }, stores: createStorePorts(), client: {} as never, userId: 'system' },
+      { id: 'member-1' },
+    )
 
     expect(event.descriptor.once).toBe(true)
     expect(spy).toHaveBeenCalledOnce()

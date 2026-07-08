@@ -21,6 +21,7 @@ import type {
   UserCommandInteractionAdapter,
 } from '../runtime/interaction-adapter.js'
 import type { InteractionRouter } from '../runtime/router.js'
+import type { StorePorts } from '../stores/types.js'
 import { DISCORD_OPTION_KIND } from './option-kinds.js'
 import { renderInteractionDefer, renderInteractionReply, renderInteractionUpdate, renderModal } from './render.js'
 
@@ -177,52 +178,53 @@ export async function handleInteraction<TServices>(
   interaction: Interaction,
   router: InteractionRouter<TServices>,
   createServices: () => Promise<TServices>,
+  stores?: StorePorts,
 ): Promise<void> {
   if (interaction.isAutocomplete()) {
     const adapter = toAutocompleteAdapter(interaction)
     const services = await createServices()
-    await router.dispatch(adapter, { services })
+    await router.dispatch(adapter, { services, stores })
     return
   }
 
   if (interaction.isChatInputCommand()) {
     const adapter = toChatInputAdapter(interaction)
     const services = await createServices()
-    await router.dispatch(adapter, { services })
+    await router.dispatch(adapter, { services, stores })
     return
   }
 
   if (interaction.isUserContextMenuCommand()) {
     const adapter = toUserCommandAdapter(interaction)
     const services = await createServices()
-    await router.dispatch(adapter, { services })
+    await router.dispatch(adapter, { services, stores })
     return
   }
 
   if (interaction.isMessageContextMenuCommand()) {
     const adapter = toMessageCommandAdapter(interaction)
     const services = await createServices()
-    await router.dispatch(adapter, { services })
+    await router.dispatch(adapter, { services, stores })
     return
   }
 
   if (interaction.isButton()) {
     const adapter = toButtonAdapter(interaction)
     const services = await createServices()
-    await router.dispatch(adapter, { services })
+    await router.dispatch(adapter, { services, stores })
     return
   }
 
   if (interaction.isStringSelectMenu()) {
     const adapter = toSelectAdapter(interaction)
     const services = await createServices()
-    await router.dispatch(adapter, { services })
+    await router.dispatch(adapter, { services, stores })
     return
   }
 
   if (interaction.isModalSubmit()) {
     const adapter = toModalAdapter(interaction)
     const services = await createServices()
-    await router.dispatch(adapter, { services })
+    await router.dispatch(adapter, { services, stores })
   }
 }

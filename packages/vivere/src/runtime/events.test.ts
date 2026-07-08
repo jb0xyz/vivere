@@ -45,7 +45,18 @@ test('calls event execute with services, client, and payload args', async () => 
   listenerByKey.get('on:guildMemberAdd')?.(member)
   await vi.waitFor(() => expect(execute).toHaveBeenCalledOnce())
 
-  expect(execute).toHaveBeenCalledWith({ services: { marker: 'service' }, client, userId: 'system' }, member)
+  expect(execute).toHaveBeenCalledWith(
+    expect.objectContaining({
+      services: { marker: 'service' },
+      client,
+      userId: 'system',
+      stores: expect.objectContaining({
+        kv: expect.any(Object),
+        rateLimit: expect.any(Object),
+      }),
+    }),
+    member,
+  )
 })
 
 test('catches rejected event handlers at the boundary', async () => {

@@ -1,9 +1,12 @@
+import type { StorePorts } from '../stores/types.js'
+
 export interface MiddlewareDescriptor {
   name: string
 }
 
 export interface MiddlewareContext<TServices = unknown> {
   services: TServices
+  stores: StorePorts
   userId: string
   guildId?: string
 }

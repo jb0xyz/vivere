@@ -3,6 +3,8 @@ import type { EventDefinition } from '../authoring/create-vivere.js'
 import type { AnyMiddlewareDefinition } from '../authoring/middleware.js'
 import type { ErrorReporter } from '../internal/errors.js'
 import { reportError as defaultReportError } from '../internal/errors.js'
+import { createStorePorts } from '../stores/memory.js'
+import type { StorePorts } from '../stores/types.js'
 import { runWithMiddleware } from './middleware.js'
 
 export function registerEvents<TServices>(
@@ -11,13 +13,14 @@ export function registerEvents<TServices>(
   createServices: () => Promise<TServices>,
   reportError: ErrorReporter = defaultReportError,
   middleware: AnyMiddlewareDefinition<TServices>[] = [],
+  stores: StorePorts = createStorePorts(),
 ): void {
   for (const event of events) {
     const listener = (...args: unknown[]) => {
       void Promise.resolve()
         .then(async () => {
           const services = await createServices()
-          const ctx = { services, client, userId: 'system' }
+          const ctx = { services, stores, client, userId: 'system' }
           await runWithMiddleware({
             ctx,
             middleware: [...middleware, ...event.middleware],

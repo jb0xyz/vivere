@@ -2,6 +2,7 @@ import type { Client, GuildMember, Message, User } from 'discord.js'
 import { expectTypeOf } from 'expect-type'
 import { createVivere } from './create-vivere.js'
 import { createApp } from '../runtime/create-app.js'
+import type { KeyValueStore, RateLimitStore } from '../stores/types.js'
 
 type Services = { logger: { info(msg: string): void } }
 const {
@@ -30,6 +31,8 @@ const feedbackModal = defineModal({
     expectTypeOf(ctx.fields.subject).toEqualTypeOf<string>()
     expectTypeOf(ctx.fields.body).toEqualTypeOf<string>()
     expectTypeOf(ctx.services).toEqualTypeOf<Services>()
+    expectTypeOf(ctx.stores.kv).toEqualTypeOf<KeyValueStore>()
+    expectTypeOf(ctx.stores.rateLimit).toEqualTypeOf<RateLimitStore>()
     await ctx.reply({ content: ctx.fields.subject })
   },
 })
@@ -46,6 +49,7 @@ const confirmButton = defineButton({
     expectTypeOf(ctx.params.silent).toEqualTypeOf<boolean>()
     expectTypeOf(ctx.params.mode).toEqualTypeOf<'approve' | 'deny'>()
     expectTypeOf(ctx.services).toEqualTypeOf<Services>()
+    expectTypeOf(ctx.stores.kv).toEqualTypeOf<KeyValueStore>()
     await ctx.showModal(feedbackModal, {
       params: { userId: ctx.params.userId },
       title: 'Feedback',
@@ -61,6 +65,7 @@ const pickRoleSelect = defineSelect({
     expectTypeOf(ctx.params.userId).toEqualTypeOf<string>()
     expectTypeOf(ctx.values).toEqualTypeOf<string[]>()
     expectTypeOf(ctx.services).toEqualTypeOf<Services>()
+    expectTypeOf(ctx.stores.rateLimit).toEqualTypeOf<RateLimitStore>()
     await ctx.showModal(feedbackModal, {
       params: { userId: ctx.params.userId },
       title: 'Feedback',
@@ -77,6 +82,7 @@ const demoCommand = defineCommand({
     note: opt.string('note'),
     query: opt.string('query').autocomplete(async (ctx, value) => {
       expectTypeOf(ctx.services).toEqualTypeOf<Services>()
+      expectTypeOf(ctx.stores.kv).toEqualTypeOf<KeyValueStore>()
       expectTypeOf(ctx.value).toEqualTypeOf<string>()
       expectTypeOf(value).toEqualTypeOf<string>()
       return [{ name: value, value }]
@@ -87,6 +93,7 @@ const demoCommand = defineCommand({
     expectTypeOf(ctx.options.note).toEqualTypeOf<string>()
     expectTypeOf(ctx.options.query).toEqualTypeOf<string>()
     expectTypeOf(ctx.services).toEqualTypeOf<Services>()
+    expectTypeOf(ctx.stores.rateLimit).toEqualTypeOf<RateLimitStore>()
     ctx.components.button(confirmButton, {
       params: { userId: '123456789012345678', silent: false, mode: 'approve' },
       label: 'Confirm',
@@ -113,6 +120,7 @@ const joinEvent = defineEvent({
   name: 'guildMemberAdd',
   async execute(ctx, member) {
     expectTypeOf(ctx.services).toEqualTypeOf<Services>()
+    expectTypeOf(ctx.stores.kv).toEqualTypeOf<KeyValueStore>()
     expectTypeOf(ctx.client).toEqualTypeOf<Client>()
     expectTypeOf(member).toEqualTypeOf<GuildMember>()
     ctx.services.logger.info(member.id)
@@ -124,6 +132,7 @@ const userInfoCommand = defineUserCommand({
   async execute(ctx) {
     expectTypeOf(ctx.targetUser).toEqualTypeOf<User>()
     expectTypeOf(ctx.services).toEqualTypeOf<Services>()
+    expectTypeOf(ctx.stores.kv).toEqualTypeOf<KeyValueStore>()
     await ctx.reply({ content: ctx.targetUser.username, ephemeral: true })
   },
 })
@@ -133,6 +142,7 @@ const reportMessageCommand = defineMessageCommand({
   async execute(ctx) {
     expectTypeOf(ctx.targetMessage).toEqualTypeOf<Message>()
     expectTypeOf(ctx.services).toEqualTypeOf<Services>()
+    expectTypeOf(ctx.stores.rateLimit).toEqualTypeOf<RateLimitStore>()
     await ctx.reply({ content: ctx.targetMessage.id, ephemeral: true })
   },
 })

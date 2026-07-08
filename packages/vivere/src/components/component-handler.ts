@@ -10,6 +10,8 @@ import type { ErrorReporter } from '../internal/errors.js'
 import { reportError as defaultReportError } from '../internal/errors.js'
 import { runWithMiddleware } from '../runtime/middleware.js'
 import type { ComponentInteractionAdapter } from '../runtime/interaction-adapter.js'
+import { createStorePorts } from '../stores/memory.js'
+import type { StorePorts } from '../stores/types.js'
 import { createComponentsBuilder, createModalSpec } from './component-builder.js'
 import { decodeCustomId } from './custom-id.js'
 
@@ -17,6 +19,7 @@ export type ComponentRegistry<TServices> = Map<string, ComponentDefinition<TServ
 
 export interface ComponentHandlerDeps<TServices> {
   services: TServices
+  stores?: StorePorts
 }
 
 export function getComponentRegistryKey(componentKind: string, id: string): string {
@@ -47,12 +50,14 @@ export async function handleComponent<TServices>(
     registry: ComponentRegistry<TServices>
     secret: string
     deps: ComponentHandlerDeps<TServices>
+    stores?: StorePorts
     components?: ComponentsBuilder
     middleware?: AnyMiddlewareDefinition<TServices>[]
     reportError?: ErrorReporter
   },
 ): Promise<void> {
   const reportError = options.reportError ?? defaultReportError
+  const stores = options.stores ?? options.deps.stores ?? createStorePorts()
   let decoded: { componentKind: string; id: string; params: Record<string, string> }
   try {
     decoded = decodeCustomId(adapter.customId, options.secret)
@@ -108,6 +113,7 @@ export async function handleComponent<TServices>(
         params,
         fields,
         services: options.deps.services,
+        stores,
         ...identity,
         reply: (input) => adapter.reply(input),
         defer: (input) => adapter.defer(input),
@@ -128,6 +134,7 @@ export async function handleComponent<TServices>(
     const baseCtx: ButtonContext<Record<string, unknown>, TServices> = {
       params,
       services: options.deps.services,
+      stores,
       ...identity,
       components,
       update: (input) => adapter.update(input),

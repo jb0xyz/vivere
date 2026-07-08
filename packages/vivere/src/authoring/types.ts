@@ -1,4 +1,5 @@
 import type { ButtonDescriptor, ModalDescriptor, SelectDescriptor } from './ir.js'
+import type { StorePorts } from '../stores/types.js'
 
 export type ButtonStyleName = 'primary' | 'secondary' | 'success' | 'danger'
 export type ModalFieldStyleName = 'short' | 'paragraph'
@@ -13,6 +14,7 @@ export interface InteractionIdentity {
 
 export interface AutocompleteContext<TServices> extends InteractionIdentity {
   services: TServices
+  stores: StorePorts
   value: string
 }
 export interface SelectOptionSpec {
@@ -96,6 +98,7 @@ export interface ComponentsBuilder {
 export interface CommandContext<TOptions, TServices> extends InteractionIdentity {
   options: TOptions
   services: TServices
+  stores: StorePorts
   components: ComponentsBuilder
   reply(input: ReplyInput): Promise<void>
   defer(input?: DeferInput): Promise<void>
@@ -107,6 +110,7 @@ export interface CommandContext<TOptions, TServices> extends InteractionIdentity
 
 export interface UserCommandContext<TServices, TTargetUser = unknown> extends InteractionIdentity {
   services: TServices
+  stores: StorePorts
   targetUser: TTargetUser
   reply(input: ReplyInput): Promise<void>
   defer(input?: DeferInput): Promise<void>
@@ -114,6 +118,7 @@ export interface UserCommandContext<TServices, TTargetUser = unknown> extends In
 
 export interface MessageCommandContext<TServices, TTargetMessage = unknown> extends InteractionIdentity {
   services: TServices
+  stores: StorePorts
   targetMessage: TTargetMessage
   reply(input: ReplyInput): Promise<void>
   defer(input?: DeferInput): Promise<void>
@@ -121,12 +126,14 @@ export interface MessageCommandContext<TServices, TTargetMessage = unknown> exte
 
 export interface EventContext<TServices, TClient = unknown> extends InteractionIdentity {
   services: TServices
+  stores: StorePorts
   client: TClient
 }
 
 export interface ButtonContext<TParams, TServices> extends InteractionIdentity {
   params: TParams
   services: TServices
+  stores: StorePorts
   components: ComponentsBuilder
   update(input: ReplyInput): Promise<void>
   reply(input: ReplyInput): Promise<void>
@@ -145,6 +152,7 @@ export interface ModalContext<TParams, TFields, TServices> extends InteractionId
   params: TParams
   fields: TFields
   services: TServices
+  stores: StorePorts
   reply(input: ReplyInput): Promise<void>
   defer(input?: DeferInput): Promise<void>
 }
