@@ -32,6 +32,15 @@ export interface ButtonDescriptor {
   params: ParamDescriptor[]
 }
 
+export interface SelectDescriptor {
+  kind: 'select'
+  componentKind: 'select'
+  id: string
+  params: ParamDescriptor[]
+}
+
+export type ComponentDescriptor = ButtonDescriptor | SelectDescriptor
+
 export interface EventDescriptor {
   kind: 'event'
   name: keyof ClientEvents

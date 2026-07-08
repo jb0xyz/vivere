@@ -1,8 +1,8 @@
-import type { ButtonDefinitionForParams, ComponentsBuilder } from '../authoring/types.js'
-import type { ParamDescriptor } from '../authoring/ir.js'
+import type { ButtonDefinitionForParams, ComponentsBuilder, SelectDefinitionForParams } from '../authoring/types.js'
+import type { ComponentDescriptor, ParamDescriptor } from '../authoring/ir.js'
 import { encodeCustomId } from './custom-id.js'
 
-function encodeButtonParam(param: ParamDescriptor, value: unknown): string {
+function encodeComponentParam(param: ParamDescriptor, value: unknown): string {
   switch (param.kind) {
     case 'snowflake':
       if (typeof value !== 'string' || !/^\d{17,20}$/.test(value)) throw new Error(`Invalid snowflake param: ${value}`)
@@ -22,15 +22,28 @@ function encodeButtonParam(param: ParamDescriptor, value: unknown): string {
   }
 }
 
-function encodeButtonParams(
-  button: ButtonDefinitionForParams<Record<string, unknown>>,
+function encodeComponentParams(
+  component: { descriptor: ComponentDescriptor },
   params: Record<string, unknown>,
 ): Record<string, string> {
   const encodedParams: Record<string, string> = {}
-  for (const param of button.descriptor.params) {
-    encodedParams[param.name] = encodeButtonParam(param, params[param.name])
+  for (const param of component.descriptor.params) {
+    encodedParams[param.name] = encodeComponentParam(param, params[param.name])
   }
   return encodedParams
+}
+
+function encodeComponentCustomId(
+  component: ButtonDefinitionForParams<Record<string, unknown>> | SelectDefinitionForParams<Record<string, unknown>>,
+  params: Record<string, unknown>,
+  secret: string,
+): string {
+  return encodeCustomId(
+    component.descriptor.componentKind,
+    component.descriptor.id,
+    encodeComponentParams(component, params),
+    secret,
+  )
 }
 
 export function createComponentsBuilder(secret: string): ComponentsBuilder {
@@ -41,14 +54,22 @@ export function createComponentsBuilder(secret: string): ComponentsBuilder {
         components: [
           {
             type: 'button',
-            customId: encodeCustomId(
-              button.descriptor.componentKind,
-              button.descriptor.id,
-              encodeButtonParams(button, options.params),
-              secret,
-            ),
+            customId: encodeComponentCustomId(button, options.params, secret),
             label: options.label,
             style: options.style ?? 'primary',
+          },
+        ],
+      }
+    },
+    select(select, options) {
+      return {
+        type: 'row',
+        components: [
+          {
+            type: 'select',
+            customId: encodeComponentCustomId(select, options.params, secret),
+            placeholder: options.placeholder,
+            options: options.options,
           },
         ],
       }

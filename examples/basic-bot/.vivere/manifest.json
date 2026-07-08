@@ -27,11 +27,22 @@
       "once": true
     }
   ],
-  "buttons": [
+  "components": [
     {
       "kind": "button",
       "componentKind": "button",
       "id": "confirm",
+      "params": [
+        {
+          "name": "userId",
+          "kind": "snowflake"
+        }
+      ]
+    },
+    {
+      "kind": "select",
+      "componentKind": "select",
+      "id": "pick-role",
       "params": [
         {
           "name": "userId",

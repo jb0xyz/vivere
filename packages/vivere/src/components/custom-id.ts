@@ -11,7 +11,7 @@ export class CustomIdTooLongError extends Error {
   }
 }
 
-export type ComponentKind = 'button'
+export type ComponentKind = 'button' | 'select'
 
 function createSignature(componentKind: ComponentKind, id: string, payload: string, secret: string): string {
   return createHmac('sha256', secret)

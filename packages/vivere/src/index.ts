@@ -4,16 +4,21 @@ export type {
   ButtonInput,
   CommandDefinition,
   CommandInput,
+  ComponentDefinition,
   EventDefinition,
   EventInput,
   ParamCodec,
+  SelectDefinition,
+  SelectInput,
 } from './authoring/create-vivere.js'
 export type {
   ButtonDescriptor,
   CommandDescriptor,
+  ComponentDescriptor,
   EventDescriptor,
   OptionDescriptor,
   ParamDescriptor,
+  SelectDescriptor,
 } from './authoring/ir.js'
 export { opt } from './authoring/opt.js'
 export type {
@@ -36,9 +41,14 @@ export type {
   ButtonContext,
   ButtonStyleName,
   CommandContext,
+  ComponentSpec,
   ComponentsBuilder,
   EventContext,
   ReplyInput,
+  SelectContext,
+  SelectDefinitionForParams,
+  SelectOptionSpec,
+  SelectSpec,
   DeferInput,
 } from './authoring/types.js'
 export { createApp } from './runtime/create-app.js'

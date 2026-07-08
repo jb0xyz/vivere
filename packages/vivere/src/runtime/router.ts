@@ -1,4 +1,4 @@
-import type { ButtonDefinition, CommandDefinition } from '../authoring/create-vivere.js'
+import type { ButtonDefinition, CommandDefinition, ComponentDefinition } from '../authoring/create-vivere.js'
 import type { CommandContext } from '../authoring/types.js'
 import type { ComponentRegistry } from '../components/component-handler.js'
 import { getComponentRegistryKey, handleComponent } from '../components/component-handler.js'
@@ -14,7 +14,8 @@ export interface DispatchDeps<TServices> {
 
 export interface CreateRouterOptions<TServices> {
   commands: CommandDefinition<TServices>[]
-  buttons: ButtonDefinition<TServices>[]
+  buttons?: ButtonDefinition<TServices>[]
+  components?: ComponentDefinition<TServices>[]
   secret: string
   reportError?: ErrorReporter
 }
@@ -25,8 +26,9 @@ export interface InteractionRouter<TServices = unknown> {
 
 export function createRouter<TServices>(options: CreateRouterOptions<TServices>): InteractionRouter<TServices> {
   const commandRegistry = createRegistry(options.commands, (command) => command.descriptor.name)
-  const componentRegistry: ComponentRegistry<TServices> = createRegistry(options.buttons, (button) =>
-    getComponentRegistryKey(button.descriptor.componentKind, button.descriptor.id),
+  const componentList = [...(options.buttons ?? []), ...(options.components ?? [])]
+  const componentRegistry: ComponentRegistry<TServices> = createRegistry(componentList, (component) =>
+    getComponentRegistryKey(component.descriptor.componentKind, component.descriptor.id),
   )
   const components = createComponentsBuilder(options.secret)
   const reportError = options.reportError ?? defaultReportError
@@ -61,6 +63,7 @@ export function createRouter<TServices>(options: CreateRouterOptions<TServices>)
           await dispatchCommand(adapter, deps)
           return
         case 'button':
+        case 'select':
           await handleComponent(adapter, {
             registry: componentRegistry,
             secret: options.secret,

@@ -1,12 +1,11 @@
-import type { ButtonDefinition } from '../authoring/create-vivere.js'
-import type { ButtonContext, ComponentsBuilder } from '../authoring/types.js'
+import type { ButtonDefinition, ComponentDefinition, SelectDefinition } from '../authoring/create-vivere.js'
+import type { ButtonContext, ComponentsBuilder, SelectContext } from '../authoring/types.js'
 import type { ErrorReporter } from '../internal/errors.js'
 import { reportError as defaultReportError } from '../internal/errors.js'
 import type { ComponentInteractionAdapter } from '../runtime/interaction-adapter.js'
 import { createComponentsBuilder } from './component-builder.js'
 import { decodeCustomId } from './custom-id.js'
 
-export type ComponentDefinition<TServices> = ButtonDefinition<TServices>
 export type ComponentRegistry<TServices> = Map<string, ComponentDefinition<TServices>>
 
 export interface ComponentHandlerDeps<TServices> {
@@ -15,6 +14,18 @@ export interface ComponentHandlerDeps<TServices> {
 
 export function getComponentRegistryKey(componentKind: string, id: string): string {
   return `${componentKind}:${id}`
+}
+
+function isSelectDefinition<TServices>(
+  component: ComponentDefinition<TServices>,
+): component is SelectDefinition<TServices> {
+  return component.descriptor.componentKind === 'select'
+}
+
+function isButtonDefinition<TServices>(
+  component: ComponentDefinition<TServices>,
+): component is ButtonDefinition<TServices> {
+  return component.descriptor.componentKind === 'button'
 }
 
 export async function handleComponent<TServices>(
@@ -67,7 +78,7 @@ export async function handleComponent<TServices>(
     return
   }
 
-  const ctx: ButtonContext<Record<string, unknown>, TServices> = {
+  const baseCtx: ButtonContext<Record<string, unknown>, TServices> = {
     params,
     services: options.deps.services,
     components: options.components ?? createComponentsBuilder(options.secret),
@@ -77,7 +88,16 @@ export async function handleComponent<TServices>(
   }
 
   try {
-    await component.execute(ctx)
+    if (isSelectDefinition(component)) {
+      if (adapter.kind !== 'select') return
+      const ctx: SelectContext<Record<string, unknown>, TServices> = {
+        ...baseCtx,
+        values: adapter.values,
+      }
+      await component.execute(ctx)
+      return
+    }
+    if (isButtonDefinition(component)) await component.execute(baseCtx)
   } catch (error) {
     reportError(error, { phase: 'component', kind: component.descriptor.componentKind, id: component.descriptor.id })
   }

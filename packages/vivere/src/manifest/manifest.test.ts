@@ -2,7 +2,7 @@ import { expect, test } from 'vitest'
 import { createVivere } from '../authoring/create-vivere.js'
 import { buildManifest, manifestToJson } from './manifest.js'
 
-const { defineButton, defineCommand, defineEvent, opt, param } = createVivere()
+const { defineButton, defineCommand, defineEvent, defineSelect, opt, param } = createVivere()
 
 test('builds deterministic manifests without function fields', () => {
   const askCommand = defineCommand({
@@ -24,11 +24,16 @@ test('builds deterministic manifests without function fields', () => {
     async execute() {},
   })
   const cancelButton = defineButton({ id: 'cancel', async execute() {} })
+  const pickRoleSelect = defineSelect({
+    id: 'pick-role',
+    params: { userId: param.snowflake() },
+    async execute() {},
+  })
 
   const manifest = buildManifest({
     commands: [pingCommand.descriptor, askCommand.descriptor],
     events: [readyEvent.descriptor, joinEvent.descriptor],
-    buttons: [confirmButton.descriptor, cancelButton.descriptor],
+    components: [confirmButton.descriptor, cancelButton.descriptor, pickRoleSelect.descriptor],
   })
   const json = manifestToJson(manifest)
 
@@ -48,7 +53,7 @@ test('builds deterministic manifests without function fields', () => {
       { kind: 'event', name: 'guildMemberAdd', once: false },
       { kind: 'event', name: 'ready', once: true },
     ],
-    buttons: [
+    components: [
       { kind: 'button', componentKind: 'button', id: 'cancel', params: [] },
       {
         kind: 'button',
@@ -59,6 +64,7 @@ test('builds deterministic manifests without function fields', () => {
           { name: 'userId', kind: 'snowflake' },
         ],
       },
+      { kind: 'select', componentKind: 'select', id: 'pick-role', params: [{ name: 'userId', kind: 'snowflake' }] },
     ],
   })
   expect(
@@ -66,7 +72,7 @@ test('builds deterministic manifests without function fields', () => {
       buildManifest({
         commands: [askCommand.descriptor, pingCommand.descriptor],
         events: [joinEvent.descriptor, readyEvent.descriptor],
-        buttons: [cancelButton.descriptor, confirmButton.descriptor],
+        components: [pickRoleSelect.descriptor, cancelButton.descriptor, confirmButton.descriptor],
       }),
     ),
   ).toBe(json)

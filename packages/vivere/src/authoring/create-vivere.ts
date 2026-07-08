@@ -1,6 +1,14 @@
 import type { Client, ClientEvents } from 'discord.js'
-import type { ButtonContext, CommandContext, EventContext } from './types.js'
-import type { ButtonDescriptor, CommandDescriptor, EventDescriptor, OptionDescriptor, ParamDescriptor } from './ir.js'
+import type { ButtonContext, CommandContext, EventContext, SelectContext } from './types.js'
+import type {
+  ButtonDescriptor,
+  CommandDescriptor,
+  ComponentDescriptor,
+  EventDescriptor,
+  OptionDescriptor,
+  ParamDescriptor,
+  SelectDescriptor,
+} from './ir.js'
 import { toDiscordName } from './naming.js'
 import type { InferOptions, OptionsRecord } from './opt.js'
 import { opt } from './opt.js'
@@ -48,6 +56,21 @@ export interface ButtonInput<TParams extends ParamsRecord, TServices> {
   execute(ctx: ButtonContext<InferParams<TParams>, TServices>): Promise<void>
 }
 
+export interface SelectDefinition<TServices = unknown, TParams extends ParamsRecord = ParamsRecord> {
+  readonly descriptor: SelectDescriptor
+  readonly codecs: Record<string, ParamCodec>
+  readonly __params?: InferParams<TParams>
+  readonly execute: (ctx: SelectContext<Record<string, unknown>, TServices>) => Promise<void>
+}
+
+export interface SelectInput<TParams extends ParamsRecord, TServices> {
+  id: string
+  params?: TParams
+  execute(ctx: SelectContext<InferParams<TParams>, TServices>): Promise<void>
+}
+
+export type ComponentDefinition<TServices = unknown> = ButtonDefinition<TServices> | SelectDefinition<TServices>
+
 function createOptionDescriptors(options: OptionsRecord): OptionDescriptor[] {
   return Object.entries(options).map(([property, node]) => ({
     property,
@@ -77,6 +100,30 @@ function createParamCodecs(params: ParamsRecord): Record<string, ParamCodec> {
       },
     ]),
   )
+}
+
+function createComponentDescriptor(
+  kind: ComponentDescriptor['kind'],
+  id: string,
+  params: ParamsRecord,
+): ComponentDescriptor {
+  if (!/^[a-z0-9-]+$/.test(id)) throw new Error(`Invalid component id: ${id}`)
+
+  if (kind === 'button') {
+    return {
+      kind,
+      componentKind: kind,
+      id,
+      params: createParamDescriptors(params),
+    }
+  }
+
+  return {
+    kind,
+    componentKind: kind,
+    id,
+    params: createParamDescriptors(params),
+  }
 }
 
 export function createVivere<TServices>() {
@@ -110,20 +157,26 @@ export function createVivere<TServices>() {
   function defineButton<TParams extends ParamsRecord = Record<string, never>>(
     input: ButtonInput<TParams, TServices>,
   ): ButtonDefinition<TServices, TParams> {
-    if (!/^[a-z0-9-]+$/.test(input.id)) throw new Error(`Invalid button id: ${input.id}`)
     const params = input.params ?? ({} as TParams)
 
     return {
-      descriptor: {
-        kind: 'button',
-        componentKind: 'button',
-        id: input.id,
-        params: createParamDescriptors(params),
-      },
+      descriptor: createComponentDescriptor('button', input.id, params) as ButtonDescriptor,
       codecs: createParamCodecs(params),
       execute: input.execute as ButtonDefinition<TServices, TParams>['execute'],
     }
   }
 
-  return { defineCommand, defineEvent, defineButton, opt, param }
+  function defineSelect<TParams extends ParamsRecord = Record<string, never>>(
+    input: SelectInput<TParams, TServices>,
+  ): SelectDefinition<TServices, TParams> {
+    const params = input.params ?? ({} as TParams)
+
+    return {
+      descriptor: createComponentDescriptor('select', input.id, params) as SelectDescriptor,
+      codecs: createParamCodecs(params),
+      execute: input.execute as SelectDefinition<TServices, TParams>['execute'],
+    }
+  }
+
+  return { defineCommand, defineEvent, defineButton, defineSelect, opt, param }
 }

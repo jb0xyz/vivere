@@ -1,8 +1,13 @@
 import { resolve } from 'node:path'
-import type { ButtonDefinition, CommandDefinition, EventDefinition } from '../authoring/create-vivere.js'
+import type {
+  ButtonDefinition,
+  CommandDefinition,
+  ComponentDefinition,
+  EventDefinition,
+} from '../authoring/create-vivere.js'
 import { assertUnique } from '../internal/collections.js'
 import type { DiscoverOptions } from './discover.js'
-import { discoverButtons, discoverCommands, discoverEvents } from './discover.js'
+import { discoverComponents, discoverCommands, discoverEvents } from './discover.js'
 
 export interface ProjectDiscoveryConfig {
   commands?: string
@@ -14,11 +19,13 @@ export interface ExplicitDefinitions<TServices> {
   commands?: CommandDefinition<TServices>[]
   events?: EventDefinition<TServices>[]
   buttons?: ButtonDefinition<TServices>[]
+  components?: ComponentDefinition<TServices>[]
 }
 
 export interface ProjectDefinitions<TServices> {
   commands: CommandDefinition<TServices>[]
   events: EventDefinition<TServices>[]
+  components: ComponentDefinition<TServices>[]
   buttons: ButtonDefinition<TServices>[]
 }
 
@@ -39,21 +46,28 @@ export async function resolveProjectDefinitions<TServices>(
   const discoveredEvents = input.discovery?.events
     ? await discoverEvents<TServices>(resolve(input.baseDir, input.discovery.events), discoverOptions)
     : []
-  const discoveredButtons = input.discovery?.components
-    ? await discoverButtons<TServices>(resolve(input.baseDir, input.discovery.components), discoverOptions)
+  const discoveredComponents = input.discovery?.components
+    ? await discoverComponents<TServices>(resolve(input.baseDir, input.discovery.components), discoverOptions)
     : []
   const commands = [...(input.explicit?.commands ?? []), ...discoveredCommands]
   const events = [...(input.explicit?.events ?? []), ...discoveredEvents]
-  const buttons = [...(input.explicit?.buttons ?? []), ...discoveredButtons]
+  const components = [
+    ...(input.explicit?.buttons ?? []),
+    ...(input.explicit?.components ?? []),
+    ...discoveredComponents,
+  ]
+  const buttons = components.filter((component): component is ButtonDefinition<TServices> =>
+    component.descriptor.componentKind === 'button',
+  )
 
   assertUnique(
     commands.map((command) => command.descriptor.name),
     'command name',
   )
   assertUnique(
-    buttons.map((button) => button.descriptor.id),
-    'button id',
+    components.map((component) => `${component.descriptor.componentKind}:${component.descriptor.id}`),
+    'component id',
   )
 
-  return { commands, events, buttons }
+  return { commands, events, components, buttons }
 }

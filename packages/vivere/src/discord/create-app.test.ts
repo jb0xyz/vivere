@@ -34,6 +34,6 @@ test('translates a chat-input interaction and routes it', async () => {
 
 test('ignores non-command interactions', async () => {
   const router = createRouter({ commands: [], buttons: [], secret: 'secret' })
-  const fake = { isChatInputCommand: () => false, isButton: () => false }
+  const fake = { isChatInputCommand: () => false, isButton: () => false, isStringSelectMenu: () => false }
   await expect(handleInteraction(fake as never, router, async () => ({}))).resolves.toBeUndefined()
 })

@@ -1,7 +1,12 @@
 import { createHmac } from 'node:crypto'
 import { Client } from 'discord.js'
 import type { GatewayIntentBits } from 'discord.js'
-import type { ButtonDefinition, CommandDefinition, EventDefinition } from '../authoring/create-vivere.js'
+import type {
+  ButtonDefinition,
+  CommandDefinition,
+  ComponentDefinition,
+  EventDefinition,
+} from '../authoring/create-vivere.js'
 import type { ProjectDiscoveryConfig } from '../discovery/project-definitions.js'
 import { resolveProjectDefinitions } from '../discovery/project-definitions.js'
 import { handleInteraction } from '../discord/gateway-adapter.js'
@@ -23,6 +28,7 @@ export interface CreateAppOptions<TServices> {
   createServices: () => Promise<TServices>
   commands?: CommandDefinition<TServices>[]
   buttons?: ButtonDefinition<TServices>[]
+  components?: ComponentDefinition<TServices>[]
   events?: EventDefinition<TServices>[]
   discover?: AppDiscoveryConfig
 }
@@ -31,6 +37,7 @@ export interface ResolveDefinitionsInput<TServices> {
   cwd: string
   commands?: CommandDefinition<TServices>[]
   buttons?: ButtonDefinition<TServices>[]
+  components?: ComponentDefinition<TServices>[]
   events?: EventDefinition<TServices>[]
   discover?: AppDiscoveryConfig
 }
@@ -38,6 +45,7 @@ export interface ResolveDefinitionsInput<TServices> {
 export interface ResolvedDefinitions<TServices> {
   commands: CommandDefinition<TServices>[]
   events: EventDefinition<TServices>[]
+  components: ComponentDefinition<TServices>[]
   buttons: ButtonDefinition<TServices>[]
 }
 
@@ -56,6 +64,7 @@ export async function resolveDefinitions<TServices>(
       commands: input.commands,
       events: input.events,
       buttons: input.buttons,
+      components: input.components,
     },
     importer,
   })
@@ -76,18 +85,20 @@ export function createApp<TServices>(options: CreateAppOptions<TServices>): App 
         commands: options.commands,
         events: options.events,
         buttons: options.buttons,
+        components: options.components,
         discover: options.discover,
       })
       const router = createRouter({
         commands: definitions.commands,
         buttons: definitions.buttons,
+        components: definitions.components,
         secret,
         reportError,
       })
       registerEvents(client, definitions.events, createServices, reportError)
       client.on('interactionCreate', (interaction) => {
         void handleInteraction(interaction, router, createServices).catch((error: unknown) => {
-          reportError(error, { phase: interaction.isButton() ? 'component' : 'command' })
+          reportError(error, { phase: interaction.isButton() || interaction.isStringSelectMenu() ? 'component' : 'command' })
         })
       })
       const readyPromise = new Promise<void>((resolve, reject) => {

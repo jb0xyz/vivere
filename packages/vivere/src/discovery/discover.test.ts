@@ -1,6 +1,6 @@
 import { fileURLToPath } from 'node:url'
 import { describe, expect, test } from 'vitest'
-import { discoverButtons, discoverCommands, discoverEvents } from './discover.js'
+import { discoverButtons, discoverCommands, discoverComponents, discoverEvents } from './discover.js'
 
 const fixtureDir = fileURLToPath(new URL('__fixtures__', import.meta.url))
 
@@ -26,6 +26,15 @@ describe('discovery', () => {
     expect(buttons.map((button) => button.descriptor.id)).toEqual(['confirm', 'cancel'])
   })
 
+  test('discovers mixed component defaults recursively', async () => {
+    const components = await discoverComponents(`${fixtureDir}/valid/components`)
+
+    expect(components.map((component) => `${component.descriptor.componentKind}:${component.descriptor.id}`)).toEqual([
+      'button:confirm',
+      'select:pick-role',
+    ])
+  })
+
   test('throws when command name does not match file basename', async () => {
     await expect(discoverCommands(`${fixtureDir}/commands/bad-name`)).rejects.toThrow(
       'Command name "different-name" must match file name "wrong-file"',
@@ -38,9 +47,9 @@ describe('discovery', () => {
     )
   })
 
-  test('throws when button ids are duplicated', async () => {
-    await expect(discoverButtons(`${fixtureDir}/buttons/duplicates`)).rejects.toThrow(
-      'Duplicate button id "confirm"',
+  test('throws when component ids are duplicated within the same kind', async () => {
+    await expect(discoverComponents(`${fixtureDir}/components/duplicates`)).rejects.toThrow(
+      'Duplicate component id "button:confirm"',
     )
   })
 })

@@ -4,7 +4,7 @@ import { createVivere } from './create-vivere.js'
 import { createApp } from '../runtime/create-app.js'
 
 type Services = { logger: { info(msg: string): void } }
-const { defineButton, defineCommand, defineEvent, opt, param } = createVivere<Services>()
+const { defineButton, defineCommand, defineEvent, defineSelect, opt, param } = createVivere<Services>()
 
 const confirmButton = defineButton({
   id: 'confirm',
@@ -19,6 +19,17 @@ const confirmButton = defineButton({
     expectTypeOf(ctx.params.mode).toEqualTypeOf<'approve' | 'deny'>()
     expectTypeOf(ctx.services).toEqualTypeOf<Services>()
     await ctx.update({ content: ctx.params.userId })
+  },
+})
+
+const pickRoleSelect = defineSelect({
+  id: 'pick-role',
+  params: { userId: param.snowflake() },
+  async execute(ctx) {
+    expectTypeOf(ctx.params.userId).toEqualTypeOf<string>()
+    expectTypeOf(ctx.values).toEqualTypeOf<string[]>()
+    expectTypeOf(ctx.services).toEqualTypeOf<Services>()
+    await ctx.update({ content: ctx.values.join(', ') })
   },
 })
 
@@ -39,6 +50,11 @@ const demoCommand = defineCommand({
       params: { userId: '123456789012345678', silent: false, mode: 'skip' },
       label: 'Confirm',
     })
+    ctx.components.select(pickRoleSelect, {
+      params: { userId: '123456789012345678' },
+      placeholder: 'Choose',
+      options: [{ label: 'Admin', value: 'admin' }],
+    })
     await ctx.reply('ok')
   },
 })
@@ -58,6 +74,7 @@ createApp({
   createServices: async () => ({ logger: { info() {} }, extra: true }),
   commands: [demoCommand],
   buttons: [confirmButton],
+  components: [pickRoleSelect],
   events: [joinEvent],
 })
 
@@ -66,6 +83,7 @@ createApp({
   createServices: async () => ({ logger: { info() {} } }),
   commands: [demoCommand],
   buttons: [confirmButton],
+  components: [pickRoleSelect],
   events: [joinEvent],
 })
 
@@ -93,4 +111,12 @@ createApp({
   createServices: async () => ({}),
   commands: [],
   buttons: [confirmButton],
+})
+
+createApp({
+  config: { token: 'token', intents: [] },
+  // @ts-expect-error components require logger service
+  createServices: async () => ({}),
+  commands: [],
+  components: [pickRoleSelect],
 })

@@ -1,6 +1,20 @@
-import { ActionRowBuilder, ButtonBuilder, ButtonStyle, MessageFlags } from 'discord.js'
+import {
+  ActionRowBuilder,
+  ButtonBuilder,
+  ButtonStyle,
+  MessageFlags,
+  StringSelectMenuBuilder,
+} from 'discord.js'
 import type { InteractionDeferReplyOptions, InteractionReplyOptions, InteractionUpdateOptions } from 'discord.js'
-import type { ActionRowSpec, ButtonSpec, ButtonStyleName, DeferInput, ReplyInput } from '../authoring/types.js'
+import type {
+  ActionRowSpec,
+  ButtonSpec,
+  ButtonStyleName,
+  ComponentSpec,
+  DeferInput,
+  ReplyInput,
+  SelectSpec,
+} from '../authoring/types.js'
 
 const BUTTON_STYLE = {
   primary: ButtonStyle.Primary,
@@ -16,8 +30,21 @@ function renderButton(button: ButtonSpec): ButtonBuilder {
     .setStyle(BUTTON_STYLE[button.style])
 }
 
-function renderActionRow(row: ActionRowSpec): ActionRowBuilder<ButtonBuilder> {
-  return new ActionRowBuilder<ButtonBuilder>().addComponents(row.components.map(renderButton))
+function renderSelect(select: SelectSpec): StringSelectMenuBuilder {
+  const builder = new StringSelectMenuBuilder()
+    .setCustomId(select.customId)
+    .setOptions(select.options)
+  if (select.placeholder) builder.setPlaceholder(select.placeholder)
+  return builder
+}
+
+function renderComponent(component: ComponentSpec): ButtonBuilder | StringSelectMenuBuilder {
+  if (component.type === 'button') return renderButton(component)
+  return renderSelect(component)
+}
+
+function renderActionRow(row: ActionRowSpec): ActionRowBuilder<ButtonBuilder | StringSelectMenuBuilder> {
+  return new ActionRowBuilder<ButtonBuilder | StringSelectMenuBuilder>().addComponents(row.components.map(renderComponent))
 }
 
 export function renderInteractionReply(input: ReplyInput): InteractionReplyOptions {

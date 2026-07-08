@@ -1,31 +1,31 @@
-import type { ButtonDescriptor, CommandDescriptor, EventDescriptor, ParamDescriptor } from '../authoring/ir.js'
+import type { CommandDescriptor, ComponentDescriptor, EventDescriptor, ParamDescriptor } from '../authoring/ir.js'
 import { serializeCommand, type SerializedCommand } from './serialize.js'
 
 export type SerializedEvent = EventDescriptor
 
 export type SerializedButtonParam = ParamDescriptor
 
-export type SerializedButton = ButtonDescriptor
+export type SerializedComponent = ComponentDescriptor
 
 export interface Manifest {
   schemaVersion: 1
   commands: SerializedCommand[]
   events: SerializedEvent[]
-  buttons: SerializedButton[]
+  components: SerializedComponent[]
 }
 
 export interface BuildManifestInput {
   commands: CommandDescriptor[]
   events: EventDescriptor[]
-  buttons: ButtonDescriptor[]
+  components: ComponentDescriptor[]
 }
 
 export function serializeEvent(event: EventDescriptor): SerializedEvent {
   return { ...event }
 }
 
-export function serializeButton(button: ButtonDescriptor): SerializedButton {
-  const params = button.params
+export function serializeComponent(component: ComponentDescriptor): SerializedComponent {
+  const params = component.params
     .map((param) => ({
       name: param.name,
       kind: param.kind,
@@ -35,7 +35,7 @@ export function serializeButton(button: ButtonDescriptor): SerializedButton {
     .sort((a, b) => a.name.localeCompare(b.name))
 
   return {
-    ...button,
+    ...component,
     params,
   }
 }
@@ -47,7 +47,9 @@ export function buildManifest(input: BuildManifestInput): Manifest {
     events: input.events
       .map(serializeEvent)
       .sort((a, b) => a.name.localeCompare(b.name) || Number(a.once) - Number(b.once)),
-    buttons: input.buttons.map(serializeButton).sort((a, b) => a.id.localeCompare(b.id)),
+    components: input.components
+      .map(serializeComponent)
+      .sort((a, b) => a.componentKind.localeCompare(b.componentKind) || a.id.localeCompare(b.id)),
   }
 }
 

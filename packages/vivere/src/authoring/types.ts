@@ -1,15 +1,26 @@
-import type { ButtonDescriptor } from './ir.js'
+import type { ButtonDescriptor, SelectDescriptor } from './ir.js'
 
 export type ButtonStyleName = 'primary' | 'secondary' | 'success' | 'danger'
+export interface SelectOptionSpec {
+  label: string
+  value: string
+}
 export interface ButtonSpec {
   type: 'button'
   customId: string
   label: string
   style: ButtonStyleName
 }
+export interface SelectSpec {
+  type: 'select'
+  customId: string
+  placeholder?: string
+  options: SelectOptionSpec[]
+}
+export type ComponentSpec = ButtonSpec | SelectSpec
 export interface ActionRowSpec {
   type: 'row'
-  components: ButtonSpec[]
+  components: ComponentSpec[]
 }
 export type ButtonActionRow = ActionRowSpec
 export type ReplyInput = string | { content: string; ephemeral?: boolean; components?: ActionRowSpec[] }
@@ -20,6 +31,11 @@ export interface ButtonDefinitionForParams<TParams extends Record<string, unknow
   readonly __params?: TParams
 }
 
+export interface SelectDefinitionForParams<TParams extends Record<string, unknown>> {
+  readonly descriptor: SelectDescriptor
+  readonly __params?: TParams
+}
+
 export interface ComponentsBuilder {
   button<TParams extends Record<string, unknown>>(
     button: ButtonDefinitionForParams<TParams>,
@@ -27,6 +43,14 @@ export interface ComponentsBuilder {
       params: NoInfer<TParams>
       label: string
       style?: ButtonStyleName
+    },
+  ): ActionRowSpec
+  select<TParams extends Record<string, unknown>>(
+    select: SelectDefinitionForParams<TParams>,
+    options: {
+      params: NoInfer<TParams>
+      placeholder?: string
+      options: SelectOptionSpec[]
     },
   ): ActionRowSpec
 }
@@ -51,4 +75,8 @@ export interface ButtonContext<TParams, TServices> {
   update(input: ReplyInput): Promise<void>
   reply(input: ReplyInput): Promise<void>
   defer(): Promise<void>
+}
+
+export interface SelectContext<TParams, TServices> extends ButtonContext<TParams, TServices> {
+  values: string[]
 }

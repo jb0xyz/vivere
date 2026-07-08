@@ -1,16 +1,24 @@
 import { readdir } from 'node:fs/promises'
 import { basename, extname, join, resolve } from 'node:path'
 import { pathToFileURL } from 'node:url'
-import type { ButtonDefinition, CommandDefinition, EventDefinition } from '../authoring/create-vivere.js'
+import type {
+  ButtonDefinition,
+  CommandDefinition,
+  ComponentDefinition,
+  EventDefinition,
+  SelectDefinition,
+} from '../authoring/create-vivere.js'
 import { assertUnique } from '../internal/collections.js'
 
-type DiscoverableDefinition = ButtonDefinition | CommandDefinition | EventDefinition
+type DiscoverableDefinition = ButtonDefinition | CommandDefinition | EventDefinition | SelectDefinition
 type DefinitionKind = DiscoverableDefinition['descriptor']['kind']
 type DefinitionByKind<TServices, TKind extends DefinitionKind> = TKind extends 'command'
   ? CommandDefinition<TServices>
   : TKind extends 'event'
     ? EventDefinition<TServices>
-    : ButtonDefinition<TServices>
+    : TKind extends 'button'
+      ? ButtonDefinition<TServices>
+      : SelectDefinition<TServices>
 
 export interface DiscoverOptions {
   import?: (absPath: string) => Promise<unknown>
@@ -93,6 +101,32 @@ async function discover<TServices, TKind extends DefinitionKind>(
   return definitionList
 }
 
+async function discoverComponentDefinitions<TServices>(
+  dir: string,
+  options: DiscoverOptions = {},
+): Promise<ComponentDefinition<TServices>[]> {
+  const importer = options.import ?? nativeImport
+  const fileList = await collectFileList(resolve(dir))
+  const definitionList = await Promise.all(
+    fileList.map(async (file) => {
+      const value = await importDefault(file, importer)
+      if (value.descriptor.kind !== 'button' && value.descriptor.kind !== 'select') {
+        throw new Error(`Expected component default export from ${file}`)
+      }
+      return value as ComponentDefinition<TServices>
+    }),
+  )
+
+  assertUnique(
+    definitionList.map((definition) =>
+      `${definition.descriptor.componentKind}:${definition.descriptor.id}`,
+    ),
+    'component id',
+  )
+
+  return definitionList
+}
+
 export async function discoverCommands<TServices = unknown>(
   dir: string,
   options: DiscoverOptions = {},
@@ -112,4 +146,11 @@ export async function discoverButtons<TServices = unknown>(
   options: DiscoverOptions = {},
 ): Promise<ButtonDefinition<TServices>[]> {
   return discover<TServices, 'button'>(dir, 'button', options)
+}
+
+export async function discoverComponents<TServices = unknown>(
+  dir: string,
+  options: DiscoverOptions = {},
+): Promise<ComponentDefinition<TServices>[]> {
+  return discoverComponentDefinitions<TServices>(dir, options)
 }

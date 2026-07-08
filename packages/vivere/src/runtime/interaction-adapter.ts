@@ -18,5 +18,14 @@ export interface ButtonInteractionAdapter {
   deferUpdate(): Promise<void>
 }
 
-export type ComponentInteractionAdapter = ButtonInteractionAdapter
+export interface SelectInteractionAdapter {
+  readonly kind: 'select'
+  readonly customId: string
+  readonly values: string[]
+  update(input: ReplyInput): Promise<void>
+  reply(input: ReplyInput): Promise<void>
+  deferUpdate(): Promise<void>
+}
+
+export type ComponentInteractionAdapter = ButtonInteractionAdapter | SelectInteractionAdapter
 export type InteractionAdapter = ChatInputInteractionAdapter | ComponentInteractionAdapter

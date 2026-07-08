@@ -58,7 +58,7 @@ describe('resolveDefinitions', () => {
     expect(definitions.buttons.map((item) => item.descriptor.id)).toEqual(['help', 'confirm', 'cancel'])
   })
 
-  test('throws on combined command or button duplicates', async () => {
+  test('throws on combined command or component duplicates', async () => {
     const duplicateCommand = defineCommand({ name: 'ping', description: 'Pong', async execute() {} })
     const duplicateButton = defineButton({ id: 'confirm', async execute() {} })
 
@@ -75,7 +75,7 @@ describe('resolveDefinitions', () => {
         buttons: [duplicateButton],
         discover: { components: 'valid/buttons' },
       }),
-    ).rejects.toThrow('Duplicate button id "confirm"')
+    ).rejects.toThrow('Duplicate component id "button:confirm"')
   })
 
   test('passes importer through to discovery', async () => {

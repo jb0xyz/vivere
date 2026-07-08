@@ -5,7 +5,7 @@ import { encodeCustomId } from './custom-id.js'
 import { handleComponent } from './component-handler.js'
 
 const secret = 'secret'
-const { defineButton, param } = createVivere<{ mark(): void }>()
+const { defineButton, defineSelect, param } = createVivere<{ mark(): void }>()
 
 test('handles signed component custom ids through the component registry', async () => {
   let seenParams: unknown
@@ -39,7 +39,37 @@ test('handles signed component custom ids through the component registry', async
   expect(mark).toHaveBeenCalledOnce()
   expect(seenParams).toEqual({ userId: '123456789012345678' })
   expect(adapter.updated).toEqual(['confirmed'])
-  expect(adapter.lastComponents?.[0]?.components[0]?.label).toBe('Again')
+  const component = adapter.lastComponents?.[0]?.components[0]
+  expect(component?.type).toBe('button')
+  if (component?.type === 'button') expect(component.label).toBe('Again')
+})
+
+test('handles select values through the shared component pipeline', async () => {
+  let seen: unknown
+  const mark = vi.fn()
+  const pickRole = defineSelect({
+    id: 'pick-role',
+    params: { userId: param.snowflake() },
+    async execute(ctx) {
+      ctx.services.mark()
+      seen = { params: ctx.params, values: ctx.values }
+      await ctx.update('picked')
+    },
+  })
+  const adapter = fakeSelectAdapter(
+    encodeCustomId('select', 'pick-role', { userId: '123456789012345678' }, secret),
+    ['admin'],
+  )
+
+  await handleComponent(adapter, {
+    registry: new Map([['select:pick-role', pickRole]]),
+    secret,
+    deps: { services: { mark } },
+  })
+
+  expect(mark).toHaveBeenCalledOnce()
+  expect(seen).toEqual({ params: { userId: '123456789012345678' }, values: ['admin'] })
+  expect(adapter.updated).toEqual(['picked'])
 })
 
 test('ignores invalid or unknown component custom ids', async () => {
@@ -83,5 +113,13 @@ function fakeButtonAdapter(customId: string) {
     },
     async reply() {},
     async deferUpdate() {},
+  }
+}
+
+function fakeSelectAdapter(customId: string, values: string[]) {
+  return {
+    ...fakeButtonAdapter(customId),
+    kind: 'select' as const,
+    values,
   }
 }

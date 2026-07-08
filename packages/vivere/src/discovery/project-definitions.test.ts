@@ -47,7 +47,7 @@ describe('resolveProjectDefinitions', () => {
     expect(importedPathList.every((item) => item.startsWith(resolve(fixtureDir)))).toBe(true)
   })
 
-  test('throws on combined command and button duplicates', async () => {
+  test('throws on combined command and component duplicates', async () => {
     const duplicateCommand = defineCommand({ name: 'ping', description: 'Pong', async execute() {} })
     const duplicateButton = defineButton({ id: 'confirm', async execute() {} })
 
@@ -64,6 +64,6 @@ describe('resolveProjectDefinitions', () => {
         discovery: { components: 'valid/buttons' },
         explicit: { buttons: [duplicateButton] },
       }),
-    ).rejects.toThrow('Duplicate button id "confirm"')
+    ).rejects.toThrow('Duplicate component id "button:confirm"')
   })
 })
