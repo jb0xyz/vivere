@@ -1,4 +1,4 @@
-import { GatewayIntentBits, createApp } from 'vivere'
+import { GatewayIntentBits, createApp } from '@jb0xyz/vivere'
 import { createServices } from './app/services.js'
 import config from '../vivere.config.js'
 

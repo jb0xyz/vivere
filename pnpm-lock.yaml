@@ -23,7 +23,7 @@ importers:
 
   examples/basic-bot:
     dependencies:
-      vivere:
+      '@jb0xyz/vivere':
         specifier: workspace:*
         version: link:../../packages/vivere
     devDependencies:

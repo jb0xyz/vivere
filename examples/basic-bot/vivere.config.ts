@@ -1,4 +1,4 @@
-import { defineConfig } from 'vivere'
+import { defineConfig } from '@jb0xyz/vivere'
 
 export default defineConfig({
   discovery: {

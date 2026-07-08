@@ -1,4 +1,4 @@
-import { createVivere } from 'vivere'
+import { createVivere } from '@jb0xyz/vivere'
 
 export type Services = { logger: { info: (m: string) => void } }
 

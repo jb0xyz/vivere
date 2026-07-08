@@ -8,7 +8,7 @@ Vivere is a TypeScript framework for Discord bots where commands, events, and co
 
 Instead of keeping a large interaction switch or a hand-written registry, you define each bot feature in its own file. Vivere discovers those files, builds a deterministic manifest, registers slash commands when asked, and routes Discord interactions to typed handlers.
 
-Vivere is MIT licensed and lives at [github.com/jb0xyz/vivere](https://github.com/jb0xyz/vivere). The current package version is `0.1.0`; it is still early, but the file-based command and component loop is already in place.
+Vivere is MIT licensed and lives at [github.com/jb0xyz/vivere](https://github.com/jb0xyz/vivere). The npm package is `@jb0xyz/vivere`. The current package version is `0.1.0`; it is still early, but the file-based command and component loop is already in place.
 
 ## What It Looks Like
 
@@ -16,7 +16,7 @@ Create one local authoring file for your service types:
 
 ```ts
 // src/app/vivere.ts
-import { createVivere } from 'vivere'
+import { createVivere } from '@jb0xyz/vivere'
 import type { Services } from './services.js'
 
 export const {
@@ -133,7 +133,7 @@ Start the bot from your own entry file:
 
 ```ts
 // src/index.ts
-import { GatewayIntentBits, createApp } from 'vivere'
+import { GatewayIntentBits, createApp } from '@jb0xyz/vivere'
 import { createServices } from './app/services.js'
 import vivereConfig from '../vivere.config.js'
 
@@ -175,6 +175,16 @@ vivere sync --global
 
 `vivere build` writes `.vivere/manifest.json`. `vivere build --check` compares the generated manifest with the committed file and exits non-zero on drift. `vivere sync` registers commands to the configured development guild; `vivere sync --global` registers them globally.
 
+## Install
+
+Install the package in your bot project:
+
+```sh
+npm install @jb0xyz/vivere
+# or
+pnpm add @jb0xyz/vivere
+```
+
 ## Run The Example
 
 Run the basic bot from the repository:
@@ -183,7 +193,7 @@ Run the basic bot from the repository:
 git clone https://github.com/jb0xyz/vivere.git
 cd vivere
 pnpm install
-pnpm --filter vivere build
+pnpm --filter @jb0xyz/vivere build
 cd examples/basic-bot
 cp .env.example .env
 pnpm start

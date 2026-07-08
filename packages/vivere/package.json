@@ -1,5 +1,5 @@
 {
-  "name": "vivere",
+  "name": "@jb0xyz/vivere",
   "version": "0.1.0",
   "description": "A TypeScript framework for building maintainable Discord bots.",
   "keywords": [
@@ -21,6 +21,7 @@
   "type": "module",
   "sideEffects": false,
   "engines": { "node": ">=20.11" },
+  "publishConfig": { "access": "public" },
   "bin": {
     "vivere": "./dist/cli.js"
   },

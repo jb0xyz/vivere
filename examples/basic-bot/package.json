@@ -6,7 +6,7 @@
     "start": "tsx src/index.ts"
   },
   "dependencies": {
-    "vivere": "workspace:*"
+    "@jb0xyz/vivere": "workspace:*"
   },
   "devDependencies": {
     "tsx": "^4.19.0",
