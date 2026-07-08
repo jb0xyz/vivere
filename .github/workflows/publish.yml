@@ -1,0 +1,47 @@
+name: publish
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+
+      - name: Use the latest npm for trusted publishing
+        run: npm install -g npm@latest
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Verify the release tag matches the package version
+        if: github.event_name == 'release'
+        run: |
+          tag="${GITHUB_REF_NAME#v}"
+          pkg="$(node -p "require('./packages/vivere/package.json').version")"
+          if [ "$tag" != "$pkg" ]; then
+            echo "Release tag ($tag) does not match package version ($pkg)"
+            exit 1
+          fi
+
+      - name: Build
+        run: pnpm --filter @jb0xyz/vivere build
+
+      - name: Test
+        run: pnpm --filter @jb0xyz/vivere test
+
+      - name: Publish to npm
+        run: npm publish --provenance --access public
+        working-directory: packages/vivere
