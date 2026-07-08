@@ -1,6 +1,6 @@
 {
   "name": "@jb0xyz/vivere",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "A TypeScript framework for building maintainable Discord bots.",
   "keywords": [
     "discord",

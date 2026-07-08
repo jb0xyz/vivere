@@ -8,7 +8,7 @@ Vivere is a TypeScript framework for Discord bots where commands, events, and co
 
 Instead of keeping a large interaction switch or a hand-written registry, you define each bot feature in its own file. Vivere discovers those files, builds a deterministic manifest, registers slash commands when asked, and routes Discord interactions to typed handlers.
 
-Vivere is MIT licensed and lives at [github.com/jb0xyz/vivere](https://github.com/jb0xyz/vivere). The npm package is `@jb0xyz/vivere`. The current package version is `0.1.0`; it is still early, but the file-based command and component loop is already in place.
+Vivere is MIT licensed and lives at [github.com/jb0xyz/vivere](https://github.com/jb0xyz/vivere). The npm package is `@jb0xyz/vivere`. The current package version is `0.2.0`; it is still early, but the file-based command and component loop is already in place.
 
 ## What It Looks Like
 
