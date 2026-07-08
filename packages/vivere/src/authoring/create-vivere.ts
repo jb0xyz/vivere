@@ -1,4 +1,4 @@
-import type { ClientEvents } from 'discord.js'
+import type { Client, ClientEvents } from 'discord.js'
 import type { ButtonContext, CommandContext, EventContext } from './types.js'
 import type { ButtonDescriptor, CommandDescriptor, EventDescriptor, OptionDescriptor, ParamDescriptor } from './ir.js'
 import { toDiscordName } from './naming.js'
@@ -32,7 +32,7 @@ export interface EventDefinition<TServices = unknown> {
 export interface EventInput<K extends keyof ClientEvents, TServices> {
   name: K
   once?: boolean
-  execute(ctx: EventContext<TServices>, ...args: ClientEvents[K]): Promise<void>
+  execute(ctx: EventContext<TServices, Client>, ...args: ClientEvents[K]): Promise<void>
 }
 
 export interface ButtonDefinition<TServices = unknown, TParams extends ParamsRecord = ParamsRecord> {

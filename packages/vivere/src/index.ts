@@ -31,7 +31,9 @@ export type { InferParams, ParamKind, ParamNode, ParamsRecord } from './authorin
 export { defineConfig } from './config/define-config.js'
 export type { VivereConfig } from './config/define-config.js'
 export type {
+  ActionRowSpec,
   ButtonActionRow,
+  ButtonSpec,
   ButtonDefinitionForParams,
   ButtonContext,
   ButtonStyleName,

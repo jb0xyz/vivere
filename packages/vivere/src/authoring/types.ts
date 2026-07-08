@@ -1,9 +1,18 @@
-import type { ActionRowBuilder, ButtonBuilder, Client } from 'discord.js'
 import type { ButtonDescriptor } from './ir.js'
 
 export type ButtonStyleName = 'primary' | 'secondary' | 'success' | 'danger'
-export type ButtonActionRow = ActionRowBuilder<ButtonBuilder>
-export type ReplyInput = string | { content: string; ephemeral?: boolean; components?: ButtonActionRow[] }
+export interface ButtonSpec {
+  type: 'button'
+  customId: string
+  label: string
+  style: ButtonStyleName
+}
+export interface ActionRowSpec {
+  type: 'row'
+  components: ButtonSpec[]
+}
+export type ButtonActionRow = ActionRowSpec
+export type ReplyInput = string | { content: string; ephemeral?: boolean; components?: ActionRowSpec[] }
 export type DeferInput = { ephemeral?: boolean }
 
 export interface ButtonDefinitionForParams<TParams extends Record<string, unknown>> {
@@ -19,7 +28,7 @@ export interface ComponentsBuilder {
       label: string
       style?: ButtonStyleName
     },
-  ): ButtonActionRow
+  ): ActionRowSpec
 }
 
 export interface CommandContext<TOptions, TServices> {
@@ -30,14 +39,15 @@ export interface CommandContext<TOptions, TServices> {
   defer(input?: DeferInput): Promise<void>
 }
 
-export interface EventContext<TServices> {
+export interface EventContext<TServices, TClient = unknown> {
   services: TServices
-  client: Client
+  client: TClient
 }
 
 export interface ButtonContext<TParams, TServices> {
   params: TParams
   services: TServices
+  components: ComponentsBuilder
   update(input: ReplyInput): Promise<void>
   reply(input: ReplyInput): Promise<void>
   defer(): Promise<void>

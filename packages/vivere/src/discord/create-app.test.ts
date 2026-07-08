@@ -1,6 +1,6 @@
 import { expect, test, vi } from 'vitest'
 import { createVivere } from '../authoring/create-vivere.js'
-import { handleInteraction } from './client.js'
+import { handleInteraction } from './gateway-adapter.js'
 import { createRouter } from '../runtime/router.js'
 
 const { defineCommand } = createVivere<{ log: (m: string) => void }>()

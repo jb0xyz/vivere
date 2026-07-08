@@ -1,4 +1,4 @@
-import type { GuildMember, User } from 'discord.js'
+import type { Client, GuildMember, User } from 'discord.js'
 import { expectTypeOf } from 'expect-type'
 import { createVivere } from './create-vivere.js'
 import { createApp } from '../runtime/create-app.js'
@@ -47,6 +47,7 @@ const joinEvent = defineEvent({
   name: 'guildMemberAdd',
   async execute(ctx, member) {
     expectTypeOf(ctx.services).toEqualTypeOf<Services>()
+    expectTypeOf(ctx.client).toEqualTypeOf<Client>()
     expectTypeOf(member).toEqualTypeOf<GuildMember>()
     ctx.services.logger.info(member.id)
   },

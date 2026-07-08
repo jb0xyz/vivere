@@ -160,8 +160,7 @@ test('emits a typed button component with signed params', async () => {
         params: { userId: '123456789012345678' },
         label: 'Confirm',
       })
-      const json = row.toJSON() as { components: Array<{ custom_id: string }> }
-      customId = json.components[0]?.custom_id ?? ''
+      customId = row.components[0]?.customId ?? ''
       await ctx.reply({ content: 'Confirm?', components: [row] })
     },
   })

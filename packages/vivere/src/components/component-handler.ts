@@ -1,6 +1,7 @@
 import type { ButtonDefinition } from '../authoring/create-vivere.js'
-import type { ButtonContext } from '../authoring/types.js'
+import type { ButtonContext, ComponentsBuilder } from '../authoring/types.js'
 import type { ComponentInteractionAdapter } from '../runtime/interaction-adapter.js'
+import { createComponentsBuilder } from './component-builder.js'
 import { decodeCustomId } from './custom-id.js'
 
 export type ComponentDefinition<TServices> = ButtonDefinition<TServices>
@@ -20,6 +21,7 @@ export async function handleComponent<TServices>(
     registry: ComponentRegistry<TServices>
     secret: string
     deps: ComponentHandlerDeps<TServices>
+    components?: ComponentsBuilder
   },
 ): Promise<void> {
   let decoded: { componentKind: string; id: string; params: Record<string, string> }
@@ -56,6 +58,7 @@ export async function handleComponent<TServices>(
   const ctx: ButtonContext<Record<string, unknown>, TServices> = {
     params,
     services: options.deps.services,
+    components: options.components ?? createComponentsBuilder(options.secret),
     update: (input) => adapter.update(input),
     reply: (input) => adapter.reply(input),
     defer: () => adapter.deferUpdate(),

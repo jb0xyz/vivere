@@ -1,5 +1,6 @@
 import { expect, test, vi } from 'vitest'
 import { createVivere } from '../authoring/create-vivere.js'
+import type { ActionRowSpec, ReplyInput } from '../authoring/types.js'
 import { encodeCustomId } from './custom-id.js'
 import { handleComponent } from './component-handler.js'
 
@@ -15,7 +16,16 @@ test('handles signed component custom ids through the component registry', async
     async execute(ctx) {
       ctx.services.mark()
       seenParams = ctx.params
-      await ctx.update('confirmed')
+      await ctx.update({
+        content: 'confirmed',
+        components: [
+          ctx.components.button(confirm, {
+            params: { userId: '123456789012345678' },
+            label: 'Again',
+            style: 'secondary',
+          }),
+        ],
+      })
     },
   })
   const adapter = fakeButtonAdapter(encodeCustomId('button', 'confirm', { userId: '123456789012345678' }, secret))
@@ -29,6 +39,7 @@ test('handles signed component custom ids through the component registry', async
   expect(mark).toHaveBeenCalledOnce()
   expect(seenParams).toEqual({ userId: '123456789012345678' })
   expect(adapter.updated).toEqual(['confirmed'])
+  expect(adapter.lastComponents?.[0]?.components[0]?.label).toBe('Again')
 })
 
 test('ignores invalid or unknown component custom ids', async () => {
@@ -51,12 +62,17 @@ test('ignores invalid or unknown component custom ids', async () => {
 
 function fakeButtonAdapter(customId: string) {
   const updated: string[] = []
+  let lastComponents: ActionRowSpec[] | undefined
   return {
     kind: 'button' as const,
     customId,
     updated,
-    async update(input: string | { content: string }) {
+    get lastComponents() {
+      return lastComponents
+    },
+    async update(input: ReplyInput) {
       updated.push(typeof input === 'string' ? input : input.content)
+      if (typeof input !== 'string') lastComponents = input.components
     },
     async reply() {},
     async deferUpdate() {},
