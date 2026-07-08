@@ -10,7 +10,7 @@ import type {
 import type { ProjectDiscoveryConfig } from '../discovery/project-definitions.js'
 import { resolveProjectDefinitions } from '../discovery/project-definitions.js'
 import { handleInteraction } from '../discord/gateway-adapter.js'
-import { toCommandJSON } from '../discord/to-command-json.js'
+import { buildCommandTree } from '../discord/to-command-json.js'
 import { reportError } from '../internal/errors.js'
 import { registerEvents } from './events.js'
 import { createRouter } from './router.js'
@@ -110,7 +110,7 @@ export function createApp<TServices>(options: CreateAppOptions<TServices>): App 
 
           ready.application.commands
             .set(
-              definitions.commands.map((command) => toCommandJSON(command.descriptor)),
+              buildCommandTree(definitions.commands.map((command) => command.descriptor)),
               config.devGuildId,
             )
             .then(() => resolve())

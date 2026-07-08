@@ -12,9 +12,14 @@ import { renderInteractionDefer, renderInteractionReply, renderInteractionUpdate
 export function toChatInputAdapter(
   interaction: ChatInputCommandInteraction,
 ): ChatInputInteractionAdapter {
+  const group = interaction.options?.getSubcommandGroup(false)
+  const subcommand = interaction.options?.getSubcommand(false)
+  const route = [interaction.commandName, group, subcommand].filter((item): item is string => Boolean(item))
+
   return {
     kind: 'command',
     commandName: interaction.commandName,
+    route,
     getOption(name, kind, required) {
       return DISCORD_OPTION_KIND[kind].get(interaction.options, name, required)
     },

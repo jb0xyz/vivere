@@ -25,7 +25,7 @@ export interface InteractionRouter<TServices = unknown> {
 }
 
 export function createRouter<TServices>(options: CreateRouterOptions<TServices>): InteractionRouter<TServices> {
-  const commandRegistry = createRegistry(options.commands, (command) => command.descriptor.name)
+  const commandRegistry = createRegistry(options.commands, (command) => command.descriptor.route.join('/'))
   const componentList = [...(options.buttons ?? []), ...(options.components ?? [])]
   const componentRegistry: ComponentRegistry<TServices> = createRegistry(componentList, (component) =>
     getComponentRegistryKey(component.descriptor.componentKind, component.descriptor.id),
@@ -34,8 +34,9 @@ export function createRouter<TServices>(options: CreateRouterOptions<TServices>)
   const reportError = options.reportError ?? defaultReportError
 
   async function dispatchCommand(adapter: ChatInputInteractionAdapter, deps: DispatchDeps<TServices>): Promise<void> {
-    const command = commandRegistry.get(adapter.commandName)
-    if (!command) return
+    const route = adapter.route.length > 0 ? adapter.route : [adapter.commandName]
+    const command = commandRegistry.get(route.join('/'))
+    if (!command?.execute) return
 
     const resolvedOptions: Record<string, unknown> = {}
     for (const option of command.descriptor.options) {
@@ -52,7 +53,7 @@ export function createRouter<TServices>(options: CreateRouterOptions<TServices>)
     try {
       await command.execute(ctx)
     } catch (error) {
-      reportError(error, { phase: 'command', id: adapter.commandName })
+      reportError(error, { phase: 'command', id: route.join('/') })
     }
   }
 

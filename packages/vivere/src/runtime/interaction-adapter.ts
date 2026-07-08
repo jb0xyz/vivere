@@ -5,6 +5,7 @@ import type { OptionKind } from '../authoring/opt.js'
 export interface ChatInputInteractionAdapter {
   readonly kind: 'command'
   readonly commandName: string
+  readonly route: string[]
   getOption(name: string, kind: OptionKind, required: boolean): unknown
   reply(input: ReplyInput): Promise<void>
   deferReply(input?: DeferInput): Promise<void>

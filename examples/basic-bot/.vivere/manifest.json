@@ -3,12 +3,39 @@
   "commands": [
     {
       "kind": "command",
+      "name": "admin",
+      "description": "관리 명령",
+      "route": [
+        "admin"
+      ],
+      "options": []
+    },
+    {
+      "kind": "command",
       "name": "ask",
       "description": "확인 버튼을 보냅니다",
       "route": [
         "ask"
       ],
       "options": []
+    },
+    {
+      "kind": "command",
+      "name": "ban",
+      "description": "사용자를 차단합니다",
+      "route": [
+        "admin",
+        "ban"
+      ],
+      "options": [
+        {
+          "property": "targetUser",
+          "name": "target-user",
+          "kind": "user",
+          "description": "차단할 사용자",
+          "required": true
+        }
+      ]
     },
     {
       "kind": "command",

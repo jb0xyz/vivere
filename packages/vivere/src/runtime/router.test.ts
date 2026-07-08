@@ -12,11 +12,13 @@ const { defineButton, defineCommand, defineSelect, opt, param } = createVivere<{
 function fakeAdapter(
   commandName: string,
   options: Record<string, unknown> = {},
+  route = [commandName],
 ): ChatInputInteractionAdapter & { replied: string[] } {
   const replied: string[] = []
   return {
     kind: 'command',
     commandName,
+    route,
     replied,
     getOption(name) {
       return options[name]
@@ -67,6 +69,26 @@ test('resolves declared options into ctx.options by their TS keys', async () => 
   expect(seen).toEqual({ targetUser: 'abc', loud: true })
 })
 
+test('dispatches chat input commands by full route', async () => {
+  const mark = vi.fn()
+  const ban = defineCommand({
+    name: 'ban',
+    description: 'ban',
+    async execute(ctx) {
+      ctx.services.mark()
+      await ctx.reply('banned')
+    },
+  })
+  const routedBan = { ...ban, descriptor: { ...ban.descriptor, route: ['admin', 'ban'] } }
+  const router = createRouter({ commands: [routedBan], buttons: [], secret })
+  const adapter = fakeAdapter('admin', {}, ['admin', 'ban'])
+
+  await router.dispatch(adapter, { services: { mark } })
+
+  expect(mark).toHaveBeenCalledOnce()
+  expect(adapter.replied).toEqual(['banned'])
+})
+
 test('passes required option presence to the adapter', async () => {
   const seenList: Array<{ name: string; required: boolean }> = []
   const inspect = defineCommand({
@@ -82,6 +104,7 @@ test('passes required option presence to the adapter', async () => {
   const adapter: ChatInputInteractionAdapter = {
     kind: 'command',
     commandName: 'inspect',
+    route: ['inspect'],
     getOption(name, _kind, required) {
       seenList.push({ name, required })
       return undefined

@@ -22,14 +22,14 @@ export interface ParamCodec {
 
 export interface CommandDefinition<TServices = unknown> {
   readonly descriptor: CommandDescriptor
-  readonly execute: (ctx: CommandContext<Record<string, unknown>, TServices>) => Promise<void>
+  readonly execute?: (ctx: CommandContext<Record<string, unknown>, TServices>) => Promise<void>
 }
 
 export interface CommandInput<TOptions extends OptionsRecord, TServices> {
   name: string
   description: string
   options?: TOptions
-  execute(ctx: CommandContext<InferOptions<TOptions>, TServices>): Promise<void>
+  execute?(ctx: CommandContext<InferOptions<TOptions>, TServices>): Promise<void>
 }
 
 export interface EventDefinition<TServices = unknown> {
@@ -131,15 +131,17 @@ export function createVivere<TServices>() {
     input: CommandInput<TOptions, TServices>,
   ): CommandDefinition<TServices> {
     const options = input.options ?? {}
+    const descriptor: CommandDescriptor = {
+      kind: 'command',
+      name: input.name,
+      description: input.description,
+      route: [input.name],
+      options: createOptionDescriptors(options),
+    }
+    if (!input.execute) return { descriptor }
     return {
-      descriptor: {
-        kind: 'command',
-        name: input.name,
-        description: input.description,
-        route: [input.name],
-        options: createOptionDescriptors(options),
-      },
-      execute: input.execute as CommandDefinition<TServices>['execute'],
+      descriptor,
+      execute: input.execute as NonNullable<CommandDefinition<TServices>['execute']>,
     }
   }
 

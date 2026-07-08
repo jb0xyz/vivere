@@ -11,6 +11,22 @@ describe('discovery', () => {
     expect(commands.map((command) => command.descriptor.name)).toEqual(['ask', 'ping'])
   })
 
+  test('discovers command routes from folders and index metadata files', async () => {
+    const commands = await discoverCommands(`${fixtureDir}/commands/routes`)
+
+    expect(commands.map((command) => ({
+      name: command.descriptor.name,
+      description: command.descriptor.description,
+      route: command.descriptor.route,
+      hasExecute: typeof command.execute === 'function',
+    }))).toEqual([
+      { name: 'admin', description: 'Admin commands', route: ['admin'], hasExecute: false },
+      { name: 'ban', description: 'Ban a user', route: ['admin', 'ban'], hasExecute: true },
+      { name: 'user', description: 'User commands', route: ['admin', 'user'], hasExecute: false },
+      { name: 'add', description: 'Add a user', route: ['admin', 'user', 'add'], hasExecute: true },
+    ])
+  })
+
   test('discovers event defaults and allows duplicate event names', async () => {
     const events = await discoverEvents(`${fixtureDir}/valid/events`)
 
@@ -41,10 +57,19 @@ describe('discovery', () => {
     )
   })
 
-  test('throws when command names are duplicated', async () => {
-    await expect(discoverCommands(`${fixtureDir}/commands/duplicates`)).rejects.toThrow(
-      'Duplicate command name "ping"',
+  test('throws when command routes exceed Discord depth', async () => {
+    await expect(discoverCommands(`${fixtureDir}/commands/deep`)).rejects.toThrow(
+      'Command route "a/b/c/d" exceeds maximum depth 3',
     )
+  })
+
+  test('allows the same command leaf name in different routes', async () => {
+    const commands = await discoverCommands(`${fixtureDir}/commands/duplicates`)
+
+    expect(commands.map((command) => command.descriptor.route)).toEqual([
+      ['a', 'ping'],
+      ['b', 'ping'],
+    ])
   })
 
   test('throws when component ids are duplicated within the same kind', async () => {
