@@ -1,0 +1,68 @@
+# Vivere
+
+> TypeScript framework for Discord bots built on discord.js, with typed feature files, deterministic manifests, Gateway runtime, HTTP interaction support, and test tooling.
+
+## Project
+
+- Repository: https://github.com/jb0xyz/vivere
+- Package: `@jb0xyz/vivere`
+- License: MIT
+- Primary package: [packages/vivere](./packages/vivere)
+- Example bot: [examples/basic-bot](./examples/basic-bot)
+
+## Core Model
+
+Vivere projects define bot features as typed files. The common layout is:
+
+- `src/app/vivere.ts`: binds project services with `createVivere<Services>()` and re-exports authoring helpers.
+- `src/commands/*.ts`: slash commands and context menu commands.
+- `src/events/*.ts`: Discord client events.
+- `src/components/*.ts`: buttons, select menus, and modals.
+- `vivere.config.ts`: discovery roots, development guild, and plugins.
+- `.vivere/manifest.json`: deterministic description of the bot surface.
+
+## Main APIs
+
+- `createVivere<Services>()`: creates project-local helpers with service typing.
+- `createApp(...)`: starts the Gateway runtime with explicit definitions or `discover`.
+- `defineConfig(...)`: typed `vivere.config.ts`.
+- `defineCommand(...)`: slash commands, options, autocomplete, subcommand routes through folders.
+- `defineUserCommand(...)` and `defineMessageCommand(...)`: context menu commands.
+- `defineEvent(...)`: Discord client events.
+- `defineButton(...)`, `defineSelect(...)`, `defineModal(...)`: interactive components with signed params.
+- `definePlugin(...)`: reusable bundles of commands, events, and components.
+- `defineMiddleware(...)`: before/after/error pipeline.
+- `requirePermission(...)`, `requireRole(...)`, `cooldown(...)`, `rateLimit(...)`: declarative policies recorded in the manifest.
+- `opt`, `param`, `field`: typed builders for command options, component params, and modal fields.
+
+## Runtime Ports
+
+- Stores: `KeyValueStore` and `RateLimitStore`; memory implementations are exported from `@jb0xyz/vivere`.
+- Testing: `@jb0xyz/vivere/testing` exports `createTestBot` for running handlers without Discord.
+- HTTP: `@jb0xyz/vivere/http` exports `createHttpHandler` for Discord HTTP interactions.
+
+## Manifest Contract
+
+Run `vivere build` to write `.vivere/manifest.json`. Run `vivere build --check` in CI to detect drift. The manifest is function-free and deterministic; use it to inspect commands, events, components, middleware, and policies without importing the bot.
+
+## CLI
+
+- `vivere build`: generate `.vivere/manifest.json`.
+- `vivere build --check`: verify the committed manifest is current.
+- `vivere sync`: register commands to the configured development guild.
+- `vivere sync --global`: register global commands.
+- `vivere dev`: run the project and restart on changes.
+
+## Scaffolding
+
+`@jb0xyz/create-vivere` provides the interactive project creator. It generates localized project files, `AGENTS.md`, and Gateway or HTTP starter code.
+
+## Links
+
+- [README.md](./README.md)
+- [README.ko.md](./README.ko.md)
+- [README.ja.md](./README.ja.md)
+- [packages/vivere/src/index.ts](./packages/vivere/src/index.ts)
+- [packages/vivere/src/testing/index.ts](./packages/vivere/src/testing/index.ts)
+- [packages/vivere/src/http/index.ts](./packages/vivere/src/http/index.ts)
+- [packages/create-vivere/src/scaffold.ts](./packages/create-vivere/src/scaffold.ts)
