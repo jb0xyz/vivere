@@ -4,7 +4,24 @@ import { createVivere } from './create-vivere.js'
 import { createApp } from '../runtime/create-app.js'
 
 type Services = { logger: { info(msg: string): void } }
-const { defineButton, defineCommand, defineEvent, defineSelect, opt, param } = createVivere<Services>()
+const { defineButton, defineCommand, defineEvent, defineModal, defineSelect, field, opt, param } =
+  createVivere<Services>()
+
+const feedbackModal = defineModal({
+  id: 'feedback',
+  params: { userId: param.snowflake() },
+  fields: {
+    subject: field.short('Subject', { required: true, maxLength: 100 }),
+    body: field.paragraph('Details'),
+  },
+  async execute(ctx) {
+    expectTypeOf(ctx.params.userId).toEqualTypeOf<string>()
+    expectTypeOf(ctx.fields.subject).toEqualTypeOf<string>()
+    expectTypeOf(ctx.fields.body).toEqualTypeOf<string>()
+    expectTypeOf(ctx.services).toEqualTypeOf<Services>()
+    await ctx.reply({ content: ctx.fields.subject })
+  },
+})
 
 const confirmButton = defineButton({
   id: 'confirm',
@@ -18,6 +35,10 @@ const confirmButton = defineButton({
     expectTypeOf(ctx.params.silent).toEqualTypeOf<boolean>()
     expectTypeOf(ctx.params.mode).toEqualTypeOf<'approve' | 'deny'>()
     expectTypeOf(ctx.services).toEqualTypeOf<Services>()
+    await ctx.showModal(feedbackModal, {
+      params: { userId: ctx.params.userId },
+      title: 'Feedback',
+    })
     await ctx.update({ content: ctx.params.userId })
   },
 })
@@ -29,6 +50,10 @@ const pickRoleSelect = defineSelect({
     expectTypeOf(ctx.params.userId).toEqualTypeOf<string>()
     expectTypeOf(ctx.values).toEqualTypeOf<string[]>()
     expectTypeOf(ctx.services).toEqualTypeOf<Services>()
+    await ctx.showModal(feedbackModal, {
+      params: { userId: ctx.params.userId },
+      title: 'Feedback',
+    })
     await ctx.update({ content: ctx.values.join(', ') })
   },
 })
@@ -36,10 +61,20 @@ const pickRoleSelect = defineSelect({
 const demoCommand = defineCommand({
   name: 'demo',
   description: 'demo',
-  options: { target: opt.user('target').optional(), note: opt.string('note') },
+  options: {
+    target: opt.user('target').optional(),
+    note: opt.string('note'),
+    query: opt.string('query').autocomplete(async (ctx, value) => {
+      expectTypeOf(ctx.services).toEqualTypeOf<Services>()
+      expectTypeOf(ctx.value).toEqualTypeOf<string>()
+      expectTypeOf(value).toEqualTypeOf<string>()
+      return [{ name: value, value }]
+    }),
+  },
   async execute(ctx) {
     expectTypeOf(ctx.options.target).toEqualTypeOf<User | undefined>()
     expectTypeOf(ctx.options.note).toEqualTypeOf<string>()
+    expectTypeOf(ctx.options.query).toEqualTypeOf<string>()
     expectTypeOf(ctx.services).toEqualTypeOf<Services>()
     ctx.components.button(confirmButton, {
       params: { userId: '123456789012345678', silent: false, mode: 'approve' },
@@ -54,6 +89,10 @@ const demoCommand = defineCommand({
       params: { userId: '123456789012345678' },
       placeholder: 'Choose',
       options: [{ label: 'Admin', value: 'admin' }],
+    })
+    await ctx.showModal(feedbackModal, {
+      params: { userId: '123456789012345678' },
+      title: 'Feedback',
     })
     await ctx.reply('ok')
   },
@@ -74,7 +113,7 @@ createApp({
   createServices: async () => ({ logger: { info() {} }, extra: true }),
   commands: [demoCommand],
   buttons: [confirmButton],
-  components: [pickRoleSelect],
+  components: [pickRoleSelect, feedbackModal],
   events: [joinEvent],
 })
 
@@ -83,7 +122,7 @@ createApp({
   createServices: async () => ({ logger: { info() {} } }),
   commands: [demoCommand],
   buttons: [confirmButton],
-  components: [pickRoleSelect],
+  components: [pickRoleSelect, feedbackModal],
   events: [joinEvent],
 })
 
@@ -118,5 +157,5 @@ createApp({
   // @ts-expect-error components require logger service
   createServices: async () => ({}),
   commands: [],
-  components: [pickRoleSelect],
+  components: [pickRoleSelect, feedbackModal],
 })

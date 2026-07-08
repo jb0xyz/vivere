@@ -34,6 +34,22 @@ export function serializeComponent(component: ComponentDescriptor): SerializedCo
     }))
     .sort((a, b) => a.name.localeCompare(b.name))
 
+  if (component.kind === 'modal') {
+    return {
+      ...component,
+      params,
+      fields: component.fields.map((field) => ({
+        name: field.name,
+        style: field.style,
+        label: field.label,
+        required: field.required,
+        ...(field.maxLength === undefined ? {} : { maxLength: field.maxLength }),
+        ...(field.minLength === undefined ? {} : { minLength: field.minLength }),
+        ...(field.placeholder === undefined ? {} : { placeholder: field.placeholder }),
+      })),
+    }
+  }
+
   return {
     ...component,
     params,

@@ -98,7 +98,12 @@ export function createApp<TServices>(options: CreateAppOptions<TServices>): App 
       registerEvents(client, definitions.events, createServices, reportError)
       client.on('interactionCreate', (interaction) => {
         void handleInteraction(interaction, router, createServices).catch((error: unknown) => {
-          reportError(error, { phase: interaction.isButton() || interaction.isStringSelectMenu() ? 'component' : 'command' })
+          reportError(error, {
+            phase:
+              interaction.isButton() || interaction.isStringSelectMenu() || interaction.isModalSubmit()
+                ? 'component'
+                : 'command',
+          })
         })
       })
       const readyPromise = new Promise<void>((resolve, reject) => {

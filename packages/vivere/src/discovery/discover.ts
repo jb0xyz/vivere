@@ -6,11 +6,12 @@ import type {
   CommandDefinition,
   ComponentDefinition,
   EventDefinition,
+  ModalDefinition,
   SelectDefinition,
 } from '../authoring/create-vivere.js'
 import { assertUnique } from '../internal/collections.js'
 
-type DiscoverableDefinition = ButtonDefinition | CommandDefinition | EventDefinition | SelectDefinition
+type DiscoverableDefinition = ButtonDefinition | CommandDefinition | EventDefinition | ModalDefinition | SelectDefinition
 type DefinitionKind = DiscoverableDefinition['descriptor']['kind']
 type DefinitionByKind<TServices, TKind extends DefinitionKind> = TKind extends 'command'
   ? CommandDefinition<TServices>
@@ -18,7 +19,9 @@ type DefinitionByKind<TServices, TKind extends DefinitionKind> = TKind extends '
     ? EventDefinition<TServices>
     : TKind extends 'button'
       ? ButtonDefinition<TServices>
-      : SelectDefinition<TServices>
+      : TKind extends 'select'
+        ? SelectDefinition<TServices>
+        : ModalDefinition<TServices>
 
 export interface DiscoverOptions {
   import?: (absPath: string) => Promise<unknown>
@@ -144,7 +147,11 @@ async function discoverComponentDefinitions<TServices>(
   const definitionList = await Promise.all(
     fileList.map(async (file) => {
       const value = await importDefault(file, importer)
-      if (value.descriptor.kind !== 'button' && value.descriptor.kind !== 'select') {
+      if (
+        value.descriptor.kind !== 'button' &&
+        value.descriptor.kind !== 'select' &&
+        value.descriptor.kind !== 'modal'
+      ) {
         throw new Error(`Expected component default export from ${file}`)
       }
       return value as ComponentDefinition<TServices>

@@ -1,4 +1,5 @@
 import type { Attachment, Role, User } from 'discord.js'
+import type { AutocompleteChoice, AutocompleteContext } from './types.js'
 
 export type Presence = 'required' | 'optional'
 export type OptionKind =
@@ -10,41 +11,57 @@ export type OptionKind =
   | 'role'
   | 'attachment'
 
-export interface OptionNode<TValue, TPresence extends Presence> {
+export type AutocompleteResolver<TServices> = (
+  ctx: AutocompleteContext<TServices>,
+  value: string,
+) => AutocompleteChoice[] | Promise<AutocompleteChoice[]>
+
+export interface OptionNode<TValue, TPresence extends Presence, TServices = unknown> {
   readonly kind: OptionKind
   readonly description: string
   readonly presence: TPresence
-  optional(): OptionNode<TValue, 'optional'>
+  readonly autocompleteResolver?: unknown
+  optional(): OptionNode<TValue, 'optional', TServices>
+  autocomplete(resolver: AutocompleteResolver<TServices>): OptionNode<TValue, TPresence, TServices>
 }
 
-function node<TValue>(kind: OptionKind, description: string): OptionNode<TValue, 'required'> {
+function node<TValue, TServices>(kind: OptionKind, description: string): OptionNode<TValue, 'required', TServices> {
   return {
     kind,
     description,
     presence: 'required',
     optional() {
-      return { ...this, presence: 'optional' } as OptionNode<TValue, 'optional'>
+      return { ...this, presence: 'optional' } as unknown as OptionNode<TValue, 'optional', TServices>
+    },
+    autocomplete(resolver) {
+      return { ...this, autocompleteResolver: resolver }
     },
   }
 }
 
-export const opt = {
-  string: (description: string) => node<string>('string', description),
-  integer: (description: string) => node<number>('integer', description),
-  number: (description: string) => node<number>('number', description),
-  boolean: (description: string) => node<boolean>('boolean', description),
-  user: (description: string) => node<User>('user', description),
-  role: (description: string) => node<Role>('role', description),
-  attachment: (description: string) => node<Attachment>('attachment', description),
+export function createOpt<TServices>() {
+  return {
+    string: (description: string) => node<string, TServices>('string', description),
+    integer: (description: string) => node<number, TServices>('integer', description),
+    number: (description: string) => node<number, TServices>('number', description),
+    boolean: (description: string) => node<boolean, TServices>('boolean', description),
+    user: (description: string) => node<User, TServices>('user', description),
+    role: (description: string) => node<Role, TServices>('role', description),
+    attachment: (description: string) => node<Attachment, TServices>('attachment', description),
+  }
 }
 
-export type AnyOption = OptionNode<unknown, Presence>
-export type OptionsRecord = Record<string, AnyOption>
+export const opt = createOpt<unknown>()
 
-export type InferOptions<T extends OptionsRecord> = {
-  [K in keyof T]: T[K] extends OptionNode<infer V, infer P>
-    ? P extends 'optional'
-      ? V | undefined
-      : V
+export type AnyOption<TServices = unknown> = OptionNode<unknown, Presence, TServices>
+export type OptionsRecord<TServices = unknown> = Record<string, AnyOption<TServices>>
+
+export type InferOptions<T> = {
+  [K in keyof T]: T[K] extends OptionNode<infer V, infer P, infer TOptionServices>
+    ? TOptionServices extends unknown
+      ? P extends 'optional'
+        ? V | undefined
+        : V
+      : never
     : never
 }

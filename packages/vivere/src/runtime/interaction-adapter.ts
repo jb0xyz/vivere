@@ -1,4 +1,4 @@
-import type { DeferInput, ReplyInput } from '../authoring/types.js'
+import type { AutocompleteChoice, DeferInput, ModalSpec, ReplyInput } from '../authoring/types.js'
 import type { OptionKind } from '../authoring/opt.js'
 
 /** Narrow boundary the router depends on — NOT the whole discord.js interaction. */
@@ -9,6 +9,16 @@ export interface ChatInputInteractionAdapter {
   getOption(name: string, kind: OptionKind, required: boolean): unknown
   reply(input: ReplyInput): Promise<void>
   deferReply(input?: DeferInput): Promise<void>
+  showModal(input: ModalSpec): Promise<void>
+}
+
+export interface AutocompleteInteractionAdapter {
+  readonly kind: 'autocomplete'
+  readonly commandName: string
+  readonly route: string[]
+  readonly focusedName: string
+  readonly focusedValue: string
+  respond(choices: AutocompleteChoice[]): Promise<void>
 }
 
 export interface ButtonInteractionAdapter {
@@ -17,6 +27,7 @@ export interface ButtonInteractionAdapter {
   update(input: ReplyInput): Promise<void>
   reply(input: ReplyInput): Promise<void>
   deferUpdate(): Promise<void>
+  showModal(input: ModalSpec): Promise<void>
 }
 
 export interface SelectInteractionAdapter {
@@ -26,7 +37,16 @@ export interface SelectInteractionAdapter {
   update(input: ReplyInput): Promise<void>
   reply(input: ReplyInput): Promise<void>
   deferUpdate(): Promise<void>
+  showModal(input: ModalSpec): Promise<void>
 }
 
-export type ComponentInteractionAdapter = ButtonInteractionAdapter | SelectInteractionAdapter
-export type InteractionAdapter = ChatInputInteractionAdapter | ComponentInteractionAdapter
+export interface ModalInteractionAdapter {
+  readonly kind: 'modal'
+  readonly customId: string
+  readonly fields: Record<string, string>
+  reply(input: ReplyInput): Promise<void>
+  defer(input?: DeferInput): Promise<void>
+}
+
+export type ComponentInteractionAdapter = ButtonInteractionAdapter | SelectInteractionAdapter | ModalInteractionAdapter
+export type InteractionAdapter = ChatInputInteractionAdapter | AutocompleteInteractionAdapter | ComponentInteractionAdapter

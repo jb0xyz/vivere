@@ -19,11 +19,19 @@ test('translates a chat-input interaction and routes it', async () => {
   const reply = vi.fn(async () => {})
 
   const fakeInteraction = {
+    isAutocomplete: () => false,
     isChatInputCommand: () => true,
     isButton: () => false,
+    isStringSelectMenu: () => false,
+    isModalSubmit: () => false,
     commandName: 'ping',
+    options: {
+      getSubcommandGroup: () => null,
+      getSubcommand: () => null,
+    },
     reply,
     deferReply: async () => {},
+    showModal: async () => {},
   }
 
   await handleInteraction(fakeInteraction as never, router, async () => ({ log }))
@@ -34,7 +42,13 @@ test('translates a chat-input interaction and routes it', async () => {
 
 test('ignores non-command interactions', async () => {
   const router = createRouter({ commands: [], buttons: [], secret: 'secret' })
-  const fake = { isChatInputCommand: () => false, isButton: () => false, isStringSelectMenu: () => false }
+  const fake = {
+    isAutocomplete: () => false,
+    isChatInputCommand: () => false,
+    isButton: () => false,
+    isStringSelectMenu: () => false,
+    isModalSubmit: () => false,
+  }
   await expect(handleInteraction(fake as never, router, async () => ({}))).resolves.toBeUndefined()
 })
 
@@ -47,6 +61,7 @@ test('builds chat input adapter route from subcommand data', () => {
     },
     reply: async () => {},
     deferReply: async () => {},
+    showModal: async () => {},
   }
 
   const adapter = toChatInputAdapter(interaction as never)

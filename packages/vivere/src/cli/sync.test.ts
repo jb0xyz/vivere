@@ -1,12 +1,12 @@
 import { mkdir, rm, writeFile } from 'node:fs/promises'
-import { join, resolve } from 'node:path'
-import { pathToFileURL } from 'node:url'
+import { join } from 'node:path'
+import { fileURLToPath, pathToFileURL } from 'node:url'
 import { afterEach, expect, test, vi } from 'vitest'
 import { runSync } from './sync.js'
 
 const tmpRoot = join(process.cwd(), 'tmp-sync-project')
 const tmpRootNoGuild = join(process.cwd(), 'tmp-sync-project-no-guild')
-const packageRoot = resolve(process.cwd(), '..', '..')
+const packageRoot = fileURLToPath(new URL('../../../../', import.meta.url))
 const configSpecifier = pathToFileURL(join(packageRoot, 'packages/vivere/src/config/define-config.ts')).href
 const createVivereSpecifier = pathToFileURL(join(packageRoot, 'packages/vivere/src/authoring/create-vivere.ts')).href
 

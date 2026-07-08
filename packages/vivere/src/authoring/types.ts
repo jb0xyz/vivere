@@ -1,6 +1,15 @@
-import type { ButtonDescriptor, SelectDescriptor } from './ir.js'
+import type { ButtonDescriptor, ModalDescriptor, SelectDescriptor } from './ir.js'
 
 export type ButtonStyleName = 'primary' | 'secondary' | 'success' | 'danger'
+export type ModalFieldStyleName = 'short' | 'paragraph'
+export interface AutocompleteChoice {
+  name: string
+  value: string
+}
+export interface AutocompleteContext<TServices> {
+  services: TServices
+  value: string
+}
 export interface SelectOptionSpec {
   label: string
   value: string
@@ -16,6 +25,20 @@ export interface SelectSpec {
   customId: string
   placeholder?: string
   options: SelectOptionSpec[]
+}
+export interface ModalFieldSpec {
+  key: string
+  label: string
+  style: ModalFieldStyleName
+  required: boolean
+  maxLength?: number
+  minLength?: number
+  placeholder?: string
+}
+export interface ModalSpec {
+  customId: string
+  title: string
+  fields: ModalFieldSpec[]
 }
 export type ComponentSpec = ButtonSpec | SelectSpec
 export interface ActionRowSpec {
@@ -34,6 +57,16 @@ export interface ButtonDefinitionForParams<TParams extends Record<string, unknow
 export interface SelectDefinitionForParams<TParams extends Record<string, unknown>> {
   readonly descriptor: SelectDescriptor
   readonly __params?: TParams
+}
+
+export interface ModalDefinitionForParams<TParams extends Record<string, unknown>> {
+  readonly descriptor: ModalDescriptor
+  readonly __params?: TParams
+}
+
+export interface ShowModalOptions<TParams extends Record<string, unknown>> {
+  params: NoInfer<TParams>
+  title: string
 }
 
 export interface ComponentsBuilder {
@@ -61,6 +94,10 @@ export interface CommandContext<TOptions, TServices> {
   components: ComponentsBuilder
   reply(input: ReplyInput): Promise<void>
   defer(input?: DeferInput): Promise<void>
+  showModal<TParams extends Record<string, unknown>>(
+    modal: ModalDefinitionForParams<TParams>,
+    options: ShowModalOptions<TParams>,
+  ): Promise<void>
 }
 
 export interface EventContext<TServices, TClient = unknown> {
@@ -75,8 +112,20 @@ export interface ButtonContext<TParams, TServices> {
   update(input: ReplyInput): Promise<void>
   reply(input: ReplyInput): Promise<void>
   defer(): Promise<void>
+  showModal<TModalParams extends Record<string, unknown>>(
+    modal: ModalDefinitionForParams<TModalParams>,
+    options: ShowModalOptions<TModalParams>,
+  ): Promise<void>
 }
 
 export interface SelectContext<TParams, TServices> extends ButtonContext<TParams, TServices> {
   values: string[]
+}
+
+export interface ModalContext<TParams, TFields, TServices> {
+  params: TParams
+  fields: TFields
+  services: TServices
+  reply(input: ReplyInput): Promise<void>
+  defer(input?: DeferInput): Promise<void>
 }

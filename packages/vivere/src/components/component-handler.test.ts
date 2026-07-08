@@ -5,7 +5,7 @@ import { encodeCustomId } from './custom-id.js'
 import { handleComponent } from './component-handler.js'
 
 const secret = 'secret'
-const { defineButton, defineSelect, param } = createVivere<{ mark(): void }>()
+const { defineButton, defineModal, defineSelect, field, param } = createVivere<{ mark(): void }>()
 
 test('handles signed component custom ids through the component registry', async () => {
   let seenParams: unknown
@@ -72,6 +72,41 @@ test('handles select values through the shared component pipeline', async () => 
   expect(adapter.updated).toEqual(['picked'])
 })
 
+test('handles modal fields through the shared component pipeline', async () => {
+  let seen: unknown
+  const mark = vi.fn()
+  const feedback = defineModal({
+    id: 'feedback',
+    params: { userId: param.snowflake() },
+    fields: {
+      subject: field.short('Subject', { required: true }),
+      body: field.paragraph('Details'),
+    },
+    async execute(ctx) {
+      ctx.services.mark()
+      seen = { params: ctx.params, fields: ctx.fields }
+      await ctx.reply('saved')
+    },
+  })
+  const adapter = fakeModalAdapter(
+    encodeCustomId('modal', 'feedback', { userId: '123456789012345678' }, secret),
+    { subject: 'Hi', body: 'Details' },
+  )
+
+  await handleComponent(adapter, {
+    registry: new Map([['modal:feedback', feedback]]),
+    secret,
+    deps: { services: { mark } },
+  })
+
+  expect(mark).toHaveBeenCalledOnce()
+  expect(seen).toEqual({
+    params: { userId: '123456789012345678' },
+    fields: { subject: 'Hi', body: 'Details' },
+  })
+  expect(adapter.replied).toEqual(['saved'])
+})
+
 test('ignores invalid or unknown component custom ids', async () => {
   const reportError = vi.fn()
 
@@ -113,6 +148,7 @@ function fakeButtonAdapter(customId: string) {
     },
     async reply() {},
     async deferUpdate() {},
+    async showModal() {},
   }
 }
 
@@ -121,5 +157,19 @@ function fakeSelectAdapter(customId: string, values: string[]) {
     ...fakeButtonAdapter(customId),
     kind: 'select' as const,
     values,
+  }
+}
+
+function fakeModalAdapter(customId: string, fields: Record<string, string>) {
+  const replied: string[] = []
+  return {
+    kind: 'modal' as const,
+    customId,
+    fields,
+    replied,
+    async reply(input: ReplyInput) {
+      replied.push(typeof input === 'string' ? input : input.content)
+    },
+    async defer() {},
   }
 }

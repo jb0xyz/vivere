@@ -13,6 +13,7 @@ describe('defineCommand', () => {
       route: ['ping'],
       options: [],
     })
+    expect(cmd.autocomplete).toEqual({})
   })
 
   test('captures declared options and callable execute', async () => {
@@ -38,6 +39,7 @@ describe('defineCommand', () => {
       components: { button: vi.fn() as never, select: vi.fn() as never },
       reply: async () => {},
       defer: async () => {},
+      showModal: async () => {},
     })
     expect(spy).toHaveBeenCalledOnce()
   })

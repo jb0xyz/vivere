@@ -3,7 +3,10 @@ import {
   ButtonBuilder,
   ButtonStyle,
   MessageFlags,
+  ModalBuilder,
   StringSelectMenuBuilder,
+  TextInputBuilder,
+  TextInputStyle,
 } from 'discord.js'
 import type { InteractionDeferReplyOptions, InteractionReplyOptions, InteractionUpdateOptions } from 'discord.js'
 import type {
@@ -12,6 +15,9 @@ import type {
   ButtonStyleName,
   ComponentSpec,
   DeferInput,
+  ModalFieldSpec,
+  ModalFieldStyleName,
+  ModalSpec,
   ReplyInput,
   SelectSpec,
 } from '../authoring/types.js'
@@ -22,6 +28,11 @@ const BUTTON_STYLE = {
   success: ButtonStyle.Success,
   danger: ButtonStyle.Danger,
 } satisfies Record<ButtonStyleName, ButtonStyle>
+
+const MODAL_FIELD_STYLE = {
+  short: TextInputStyle.Short,
+  paragraph: TextInputStyle.Paragraph,
+} satisfies Record<ModalFieldStyleName, TextInputStyle>
 
 function renderButton(button: ButtonSpec): ButtonBuilder {
   return new ButtonBuilder()
@@ -70,4 +81,23 @@ export function renderInteractionUpdate(input: ReplyInput): InteractionUpdateOpt
   }
   if (input.components) output.components = input.components.map(renderActionRow)
   return output
+}
+
+function renderModalField(field: ModalFieldSpec): ActionRowBuilder<TextInputBuilder> {
+  const input = new TextInputBuilder()
+    .setCustomId(field.key)
+    .setLabel(field.label)
+    .setStyle(MODAL_FIELD_STYLE[field.style])
+    .setRequired(field.required ?? false)
+  if (field.maxLength !== undefined) input.setMaxLength(field.maxLength)
+  if (field.minLength !== undefined) input.setMinLength(field.minLength)
+  if (field.placeholder !== undefined) input.setPlaceholder(field.placeholder)
+  return new ActionRowBuilder<TextInputBuilder>().addComponents(input)
+}
+
+export function renderModal(input: ModalSpec): ModalBuilder {
+  return new ModalBuilder()
+    .setCustomId(input.customId)
+    .setTitle(input.title)
+    .addComponents(input.fields.map(renderModalField))
 }

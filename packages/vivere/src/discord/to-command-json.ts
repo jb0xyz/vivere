@@ -11,6 +11,7 @@ function serializeCommandOptions(descriptor: CommandDescriptor): APIApplicationC
       description: option.description,
       type: DISCORD_OPTION_KIND[option.kind].discordType,
       required: option.required,
+      ...(option.autocomplete ? { autocomplete: true } : {}),
     }) as APIApplicationCommandOption)
     .sort((a, b) => Number(b.required) - Number(a.required))
 }

@@ -39,12 +39,39 @@
     },
     {
       "kind": "command",
+      "name": "feedback",
+      "description": "피드백 모달을 엽니다",
+      "route": [
+        "feedback"
+      ],
+      "options": []
+    },
+    {
+      "kind": "command",
       "name": "ping",
       "description": "Pong을 반환",
       "route": [
         "ping"
       ],
       "options": []
+    },
+    {
+      "kind": "command",
+      "name": "search",
+      "description": "항목을 검색합니다",
+      "route": [
+        "search"
+      ],
+      "options": [
+        {
+          "property": "query",
+          "name": "query",
+          "kind": "string",
+          "description": "검색어",
+          "required": true,
+          "autocomplete": true
+        }
+      ]
     }
   ],
   "events": [
@@ -63,6 +90,32 @@
         {
           "name": "userId",
           "kind": "snowflake"
+        }
+      ]
+    },
+    {
+      "kind": "modal",
+      "componentKind": "modal",
+      "id": "feedback",
+      "params": [
+        {
+          "name": "userId",
+          "kind": "snowflake"
+        }
+      ],
+      "fields": [
+        {
+          "name": "subject",
+          "style": "short",
+          "label": "제목",
+          "required": true,
+          "maxLength": 100
+        },
+        {
+          "name": "body",
+          "style": "paragraph",
+          "label": "내용",
+          "required": false
         }
       ]
     },

@@ -11,6 +11,7 @@ test('maps options to Discord types and lists required ones first', () => {
     description: 'assign',
     options: {
       silent: opt.boolean('quiet').optional(),
+      search: opt.string('search').autocomplete(async () => []),
       targetUser: opt.user('member'),
     },
     async execute() {},
@@ -21,6 +22,13 @@ test('maps options to Discord types and lists required ones first', () => {
   expect(json.name).toBe('assign-role')
   expect(json.type).toBe(ApplicationCommandType.ChatInput)
   expect(json.options).toEqual([
+    {
+      name: 'search',
+      description: 'search',
+      type: ApplicationCommandOptionType.String,
+      required: true,
+      autocomplete: true,
+    },
     {
       name: 'target-user',
       description: 'member',

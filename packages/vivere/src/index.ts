@@ -7,6 +7,8 @@ export type {
   ComponentDefinition,
   EventDefinition,
   EventInput,
+  ModalDefinition,
+  ModalInput,
   ParamCodec,
   SelectDefinition,
   SelectInput,
@@ -16,12 +18,15 @@ export type {
   CommandDescriptor,
   ComponentDescriptor,
   EventDescriptor,
+  FieldDescriptor,
+  ModalDescriptor,
   OptionDescriptor,
   ParamDescriptor,
   SelectDescriptor,
 } from './authoring/ir.js'
 export { opt } from './authoring/opt.js'
 export type {
+  AutocompleteResolver,
   OptionNode,
   OptionKind,
   Presence,
@@ -31,10 +36,14 @@ export type {
 } from './authoring/opt.js'
 export { param } from './authoring/param.js'
 export type { InferParams, ParamKind, ParamNode, ParamsRecord } from './authoring/param.js'
+export { field } from './authoring/field.js'
+export type { FieldKind, FieldNode, FieldOptions, FieldsRecord, InferFields } from './authoring/field.js'
 export { defineConfig } from './config/define-config.js'
 export type { VivereConfig } from './config/define-config.js'
 export type {
   ActionRowSpec,
+  AutocompleteChoice,
+  AutocompleteContext,
   ButtonActionRow,
   ButtonSpec,
   ButtonDefinitionForParams,
@@ -44,11 +53,17 @@ export type {
   ComponentSpec,
   ComponentsBuilder,
   EventContext,
+  ModalContext,
+  ModalDefinitionForParams,
+  ModalFieldSpec,
+  ModalFieldStyleName,
+  ModalSpec,
   ReplyInput,
   SelectContext,
   SelectDefinitionForParams,
   SelectOptionSpec,
   SelectSpec,
+  ShowModalOptions,
   DeferInput,
 } from './authoring/types.js'
 export { createApp } from './runtime/create-app.js'

@@ -2,11 +2,15 @@ import type { ButtonDefinition, CommandDefinition, ComponentDefinition } from '.
 import type { CommandContext } from '../authoring/types.js'
 import type { ComponentRegistry } from '../components/component-handler.js'
 import { getComponentRegistryKey, handleComponent } from '../components/component-handler.js'
-import { createComponentsBuilder } from '../components/component-builder.js'
+import { createComponentsBuilder, createModalSpec } from '../components/component-builder.js'
 import { createRegistry } from '../internal/collections.js'
 import type { ErrorReporter } from '../internal/errors.js'
 import { reportError as defaultReportError } from '../internal/errors.js'
-import type { ChatInputInteractionAdapter, InteractionAdapter } from './interaction-adapter.js'
+import type {
+  AutocompleteInteractionAdapter,
+  ChatInputInteractionAdapter,
+  InteractionAdapter,
+} from './interaction-adapter.js'
 
 export interface DispatchDeps<TServices> {
   services: TServices
@@ -49,11 +53,39 @@ export function createRouter<TServices>(options: CreateRouterOptions<TServices>)
       components,
       reply: (input) => adapter.reply(input),
       defer: (input) => adapter.deferReply(input),
+      showModal: (modal, input) => adapter.showModal(createModalSpec(options.secret, modal, input)),
     }
     try {
       await command.execute(ctx)
     } catch (error) {
       reportError(error, { phase: 'command', id: route.join('/') })
+    }
+  }
+
+  async function dispatchAutocomplete(
+    adapter: AutocompleteInteractionAdapter,
+    deps: DispatchDeps<TServices>,
+  ): Promise<void> {
+    const route = adapter.route.length > 0 ? adapter.route : [adapter.commandName]
+    const command = commandRegistry.get(route.join('/'))
+    const resolver = command?.autocomplete[adapter.focusedName]
+    if (!resolver) {
+      await adapter.respond([])
+      return
+    }
+
+    try {
+      const choices = await resolver(
+        {
+          services: deps.services,
+          value: adapter.focusedValue,
+        },
+        adapter.focusedValue,
+      )
+      await adapter.respond(choices)
+    } catch (error) {
+      reportError(error, { phase: 'command', id: route.join('/') })
+      await adapter.respond([])
     }
   }
 
@@ -63,8 +95,12 @@ export function createRouter<TServices>(options: CreateRouterOptions<TServices>)
         case 'command':
           await dispatchCommand(adapter, deps)
           return
+        case 'autocomplete':
+          await dispatchAutocomplete(adapter, deps)
+          return
         case 'button':
         case 'select':
+        case 'modal':
           await handleComponent(adapter, {
             registry: componentRegistry,
             secret: options.secret,

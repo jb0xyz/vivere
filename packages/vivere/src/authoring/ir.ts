@@ -1,4 +1,5 @@
 import type { ClientEvents } from 'discord.js'
+import type { FieldKind } from './field.js'
 import type { OptionKind } from './opt.js'
 import type { ParamKind } from './param.js'
 
@@ -8,6 +9,7 @@ export interface OptionDescriptor {
   kind: OptionKind
   description: string
   required: boolean
+  autocomplete?: boolean
 }
 
 export interface CommandDescriptor {
@@ -39,7 +41,25 @@ export interface SelectDescriptor {
   params: ParamDescriptor[]
 }
 
-export type ComponentDescriptor = ButtonDescriptor | SelectDescriptor
+export interface FieldDescriptor {
+  name: string
+  style: FieldKind
+  label: string
+  required: boolean
+  maxLength?: number
+  minLength?: number
+  placeholder?: string
+}
+
+export interface ModalDescriptor {
+  kind: 'modal'
+  componentKind: 'modal'
+  id: string
+  params: ParamDescriptor[]
+  fields: FieldDescriptor[]
+}
+
+export type ComponentDescriptor = ButtonDescriptor | SelectDescriptor | ModalDescriptor
 
 export interface EventDescriptor {
   kind: 'event'

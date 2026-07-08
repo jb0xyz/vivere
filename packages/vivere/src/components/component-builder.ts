@@ -1,4 +1,9 @@
-import type { ButtonDefinitionForParams, ComponentsBuilder, SelectDefinitionForParams } from '../authoring/types.js'
+import type {
+  ComponentsBuilder,
+  ModalDefinitionForParams,
+  ModalSpec,
+  ShowModalOptions,
+} from '../authoring/types.js'
 import type { ComponentDescriptor, ParamDescriptor } from '../authoring/ir.js'
 import { encodeCustomId } from './custom-id.js'
 
@@ -34,7 +39,7 @@ function encodeComponentParams(
 }
 
 function encodeComponentCustomId(
-  component: ButtonDefinitionForParams<Record<string, unknown>> | SelectDefinitionForParams<Record<string, unknown>>,
+  component: { descriptor: ComponentDescriptor },
   params: Record<string, unknown>,
   secret: string,
 ): string {
@@ -44,6 +49,26 @@ function encodeComponentCustomId(
     encodeComponentParams(component, params),
     secret,
   )
+}
+
+export function createModalSpec<TParams extends Record<string, unknown>>(
+  secret: string,
+  modal: ModalDefinitionForParams<TParams>,
+  options: ShowModalOptions<TParams>,
+): ModalSpec {
+  return {
+    customId: encodeComponentCustomId(modal, options.params, secret),
+    title: options.title,
+    fields: modal.descriptor.fields.map((field) => ({
+      key: field.name,
+      label: field.label,
+      style: field.style,
+      required: field.required,
+      ...(field.maxLength === undefined ? {} : { maxLength: field.maxLength }),
+      ...(field.minLength === undefined ? {} : { minLength: field.minLength }),
+      ...(field.placeholder === undefined ? {} : { placeholder: field.placeholder }),
+    })),
+  }
 }
 
 export function createComponentsBuilder(secret: string): ComponentsBuilder {

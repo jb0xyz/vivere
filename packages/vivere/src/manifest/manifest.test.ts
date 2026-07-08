@@ -2,13 +2,16 @@ import { expect, test } from 'vitest'
 import { createVivere } from '../authoring/create-vivere.js'
 import { buildManifest, manifestToJson } from './manifest.js'
 
-const { defineButton, defineCommand, defineEvent, defineSelect, opt, param } = createVivere()
+const { defineButton, defineCommand, defineEvent, defineModal, defineSelect, field, opt, param } = createVivere()
 
 test('builds deterministic manifests without function fields', () => {
   const askCommand = defineCommand({
     name: 'ask',
     description: 'Ask',
-    options: { targetUser: opt.user('target') },
+    options: {
+      targetUser: opt.user('target'),
+      query: opt.string('query').autocomplete(async () => []),
+    },
     async execute() {},
   })
   const pingCommand = defineCommand({
@@ -29,11 +32,20 @@ test('builds deterministic manifests without function fields', () => {
     params: { userId: param.snowflake() },
     async execute() {},
   })
+  const feedbackModal = defineModal({
+    id: 'feedback',
+    params: { userId: param.snowflake() },
+    fields: {
+      subject: field.short('Subject', { required: true, maxLength: 100 }),
+      body: field.paragraph('Details'),
+    },
+    async execute() {},
+  })
 
   const manifest = buildManifest({
     commands: [pingCommand.descriptor, askCommand.descriptor],
     events: [readyEvent.descriptor, joinEvent.descriptor],
-    components: [confirmButton.descriptor, cancelButton.descriptor, pickRoleSelect.descriptor],
+    components: [confirmButton.descriptor, cancelButton.descriptor, pickRoleSelect.descriptor, feedbackModal.descriptor],
   })
   const json = manifestToJson(manifest)
 
@@ -45,7 +57,23 @@ test('builds deterministic manifests without function fields', () => {
         name: 'ask',
         description: 'Ask',
         route: ['ask'],
-        options: [{ property: 'targetUser', name: 'target-user', kind: 'user', description: 'target', required: true }],
+        options: [
+          {
+            property: 'query',
+            name: 'query',
+            kind: 'string',
+            description: 'query',
+            required: true,
+            autocomplete: true,
+          },
+          {
+            property: 'targetUser',
+            name: 'target-user',
+            kind: 'user',
+            description: 'target',
+            required: true,
+          },
+        ],
       },
       { kind: 'command', name: 'ping', description: 'Pong', route: ['ping'], options: [] },
     ],
@@ -64,6 +92,16 @@ test('builds deterministic manifests without function fields', () => {
           { name: 'userId', kind: 'snowflake' },
         ],
       },
+      {
+        kind: 'modal',
+        componentKind: 'modal',
+        id: 'feedback',
+        params: [{ name: 'userId', kind: 'snowflake' }],
+        fields: [
+          { name: 'subject', style: 'short', label: 'Subject', required: true, maxLength: 100 },
+          { name: 'body', style: 'paragraph', label: 'Details', required: false },
+        ],
+      },
       { kind: 'select', componentKind: 'select', id: 'pick-role', params: [{ name: 'userId', kind: 'snowflake' }] },
     ],
   })
@@ -72,7 +110,7 @@ test('builds deterministic manifests without function fields', () => {
       buildManifest({
         commands: [askCommand.descriptor, pingCommand.descriptor],
         events: [joinEvent.descriptor, readyEvent.descriptor],
-        components: [pickRoleSelect.descriptor, cancelButton.descriptor, confirmButton.descriptor],
+        components: [pickRoleSelect.descriptor, cancelButton.descriptor, feedbackModal.descriptor, confirmButton.descriptor],
       }),
     ),
   ).toBe(json)

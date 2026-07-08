@@ -47,6 +47,7 @@ describe('discovery', () => {
 
     expect(components.map((component) => `${component.descriptor.componentKind}:${component.descriptor.id}`)).toEqual([
       'button:confirm',
+      'modal:feedback',
       'select:pick-role',
     ])
   })
