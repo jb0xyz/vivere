@@ -2,8 +2,8 @@ import { createHmac } from 'node:crypto'
 import { Client } from 'discord.js'
 import type { GatewayIntentBits } from 'discord.js'
 import type {
+  ApplicationCommandDefinition,
   ButtonDefinition,
-  CommandDefinition,
   ComponentDefinition,
   EventDefinition,
   PluginDefinition,
@@ -12,7 +12,8 @@ import type { ProjectDiscoveryConfig } from '../discovery/project-definitions.js
 import { resolveProjectDefinitions } from '../discovery/project-definitions.js'
 import { handleInteraction } from '../discord/gateway-adapter.js'
 import { buildCommandTree } from '../discord/to-command-json.js'
-import { reportError } from '../internal/errors.js'
+import type { ErrorReporter } from '../internal/errors.js'
+import { reportError as defaultReportError } from '../internal/errors.js'
 import { registerEvents } from './events.js'
 import { createRouter } from './router.js'
 
@@ -27,17 +28,18 @@ export type AppDiscoveryConfig = ProjectDiscoveryConfig
 export interface CreateAppOptions<TServices> {
   config: AppConfig
   createServices: () => Promise<TServices>
-  commands?: CommandDefinition<TServices>[]
+  commands?: ApplicationCommandDefinition<TServices>[]
   buttons?: ButtonDefinition<TServices>[]
   components?: ComponentDefinition<TServices>[]
   events?: EventDefinition<TServices>[]
   plugins?: PluginDefinition<TServices>[]
   discover?: AppDiscoveryConfig
+  onError?: ErrorReporter
 }
 
 export interface ResolveDefinitionsInput<TServices> {
   cwd: string
-  commands?: CommandDefinition<TServices>[]
+  commands?: ApplicationCommandDefinition<TServices>[]
   buttons?: ButtonDefinition<TServices>[]
   components?: ComponentDefinition<TServices>[]
   events?: EventDefinition<TServices>[]
@@ -46,7 +48,7 @@ export interface ResolveDefinitionsInput<TServices> {
 }
 
 export interface ResolvedDefinitions<TServices> {
-  commands: CommandDefinition<TServices>[]
+  commands: ApplicationCommandDefinition<TServices>[]
   events: EventDefinition<TServices>[]
   components: ComponentDefinition<TServices>[]
   buttons: ButtonDefinition<TServices>[]
@@ -54,6 +56,10 @@ export interface ResolvedDefinitions<TServices> {
 
 export interface App {
   start(): Promise<void>
+}
+
+export function createAppErrorReporter(input: { onError?: ErrorReporter }): ErrorReporter {
+  return input.onError ?? defaultReportError
 }
 
 export async function resolveDefinitions<TServices>(
@@ -81,6 +87,7 @@ export function createApp<TServices>(options: CreateAppOptions<TServices>): App 
   }
   const secret = createHmac('sha256', config.token).update('vivere:component-custom-id').digest('base64url')
   const client = new Client({ intents: config.intents })
+  const reportError = createAppErrorReporter({ onError: options.onError })
 
   return {
     async start() {

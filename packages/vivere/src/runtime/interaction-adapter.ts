@@ -12,6 +12,22 @@ export interface ChatInputInteractionAdapter {
   showModal(input: ModalSpec): Promise<void>
 }
 
+export interface UserCommandInteractionAdapter {
+  readonly kind: 'userCommand'
+  readonly commandName: string
+  readonly targetUser: unknown
+  reply(input: ReplyInput): Promise<void>
+  deferReply(input?: DeferInput): Promise<void>
+}
+
+export interface MessageCommandInteractionAdapter {
+  readonly kind: 'messageCommand'
+  readonly commandName: string
+  readonly targetMessage: unknown
+  reply(input: ReplyInput): Promise<void>
+  deferReply(input?: DeferInput): Promise<void>
+}
+
 export interface AutocompleteInteractionAdapter {
   readonly kind: 'autocomplete'
   readonly commandName: string
@@ -49,4 +65,9 @@ export interface ModalInteractionAdapter {
 }
 
 export type ComponentInteractionAdapter = ButtonInteractionAdapter | SelectInteractionAdapter | ModalInteractionAdapter
-export type InteractionAdapter = ChatInputInteractionAdapter | AutocompleteInteractionAdapter | ComponentInteractionAdapter
+export type ContextMenuInteractionAdapter = UserCommandInteractionAdapter | MessageCommandInteractionAdapter
+export type InteractionAdapter =
+  | ChatInputInteractionAdapter
+  | AutocompleteInteractionAdapter
+  | ContextMenuInteractionAdapter
+  | ComponentInteractionAdapter

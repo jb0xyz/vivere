@@ -1,11 +1,12 @@
 import { resolve } from 'node:path'
 import type {
+  ApplicationCommandDefinition,
   ButtonDefinition,
-  CommandDefinition,
   ComponentDefinition,
   EventDefinition,
   PluginDefinition,
 } from '../authoring/create-vivere.js'
+import { getApplicationCommandKey } from '../internal/application-command-key.js'
 import { assertUnique } from '../internal/collections.js'
 import type { DiscoverOptions } from './discover.js'
 import { discoverComponents, discoverCommands, discoverEvents } from './discover.js'
@@ -17,14 +18,14 @@ export interface ProjectDiscoveryConfig {
 }
 
 export interface ExplicitDefinitions<TServices> {
-  commands?: CommandDefinition<TServices>[]
+  commands?: ApplicationCommandDefinition<TServices>[]
   events?: EventDefinition<TServices>[]
   buttons?: ButtonDefinition<TServices>[]
   components?: ComponentDefinition<TServices>[]
 }
 
 export interface ProjectDefinitions<TServices> {
-  commands: CommandDefinition<TServices>[]
+  commands: ApplicationCommandDefinition<TServices>[]
   events: EventDefinition<TServices>[]
   components: ComponentDefinition<TServices>[]
   buttons: ButtonDefinition<TServices>[]
@@ -68,8 +69,8 @@ export async function resolveProjectDefinitions<TServices>(
   )
 
   assertUnique(
-    commands.map((command) => command.descriptor.name),
-    'command name',
+    commands.map((command) => getApplicationCommandKey(command.descriptor)),
+    'command key',
   )
   assertUnique(
     components.map((component) => `${component.descriptor.componentKind}:${component.descriptor.id}`),

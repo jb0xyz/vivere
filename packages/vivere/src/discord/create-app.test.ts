@@ -3,7 +3,7 @@ import { createVivere } from '../authoring/create-vivere.js'
 import { handleInteraction, toChatInputAdapter } from './gateway-adapter.js'
 import { createRouter } from '../runtime/router.js'
 
-const { defineCommand } = createVivere<{ log: (m: string) => void }>()
+const { defineCommand, defineUserCommand } = createVivere<{ log: (m: string) => void }>()
 
 test('translates a chat-input interaction and routes it', async () => {
   const log = vi.fn()
@@ -21,6 +21,8 @@ test('translates a chat-input interaction and routes it', async () => {
   const fakeInteraction = {
     isAutocomplete: () => false,
     isChatInputCommand: () => true,
+    isUserContextMenuCommand: () => false,
+    isMessageContextMenuCommand: () => false,
     isButton: () => false,
     isStringSelectMenu: () => false,
     isModalSubmit: () => false,
@@ -40,11 +42,45 @@ test('translates a chat-input interaction and routes it', async () => {
   expect(reply).toHaveBeenCalledWith({ content: 'Pong!' })
 })
 
+test('translates a user context menu interaction and routes it', async () => {
+  const log = vi.fn()
+  const userInfo = defineUserCommand({
+    name: 'User Info',
+    async execute(ctx) {
+      ctx.services.log(ctx.targetUser.username)
+      await ctx.reply('ok')
+    },
+  })
+  const router = createRouter({ commands: [userInfo], buttons: [], secret: 'secret' })
+  const reply = vi.fn(async () => {})
+
+  const fakeInteraction = {
+    isAutocomplete: () => false,
+    isChatInputCommand: () => false,
+    isUserContextMenuCommand: () => true,
+    isMessageContextMenuCommand: () => false,
+    isButton: () => false,
+    isStringSelectMenu: () => false,
+    isModalSubmit: () => false,
+    commandName: 'User Info',
+    targetUser: { username: 'Ada' },
+    reply,
+    deferReply: async () => {},
+  }
+
+  await handleInteraction(fakeInteraction as never, router, async () => ({ log }))
+
+  expect(log).toHaveBeenCalledWith('Ada')
+  expect(reply).toHaveBeenCalledWith({ content: 'ok' })
+})
+
 test('ignores non-command interactions', async () => {
   const router = createRouter({ commands: [], buttons: [], secret: 'secret' })
   const fake = {
     isAutocomplete: () => false,
     isChatInputCommand: () => false,
+    isUserContextMenuCommand: () => false,
+    isMessageContextMenuCommand: () => false,
     isButton: () => false,
     isStringSelectMenu: () => false,
     isModalSubmit: () => false,

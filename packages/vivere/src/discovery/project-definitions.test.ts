@@ -5,7 +5,7 @@ import { createVivere } from '../authoring/create-vivere.js'
 import { resolveProjectDefinitions } from './project-definitions.js'
 
 const fixtureDir = fileURLToPath(new URL('__fixtures__', import.meta.url))
-const { defineButton, defineCommand, defineEvent, definePlugin } = createVivere()
+const { defineButton, defineCommand, defineEvent, definePlugin, defineUserCommand } = createVivere()
 
 describe('resolveProjectDefinitions', () => {
   test('combines explicit definitions with discovered project definitions', async () => {
@@ -67,7 +67,7 @@ describe('resolveProjectDefinitions', () => {
         discovery: { commands: 'valid/commands' },
         explicit: { commands: [duplicateCommand] },
       }),
-    ).rejects.toThrow('Duplicate command name "ping"')
+    ).rejects.toThrow('Duplicate command key "command:ping"')
     await expect(
       resolveProjectDefinitions({
         baseDir: fixtureDir,
@@ -81,6 +81,31 @@ describe('resolveProjectDefinitions', () => {
         discovery: { commands: 'valid/commands' },
         plugins: [definePlugin({ name: 'duplicate', commands: [duplicateCommand] })],
       }),
-    ).rejects.toThrow('Duplicate command name "ping"')
+    ).rejects.toThrow('Duplicate command key "command:ping"')
+  })
+
+  test('validates context command names by command type', async () => {
+    const slashCommand = defineCommand({ name: 'Info', description: 'Info', async execute() {} })
+    const userCommand = defineUserCommand({ name: 'Info', async execute() {} })
+    const duplicateUserCommand = defineUserCommand({ name: 'Info', async execute() {} })
+
+    await expect(
+      resolveProjectDefinitions({
+        baseDir: fixtureDir,
+        explicit: { commands: [slashCommand, userCommand] },
+      }),
+    ).resolves.toMatchObject({
+      commands: [
+        { descriptor: { kind: 'command', name: 'Info' } },
+        { descriptor: { kind: 'userCommand', name: 'Info' } },
+      ],
+    })
+
+    await expect(
+      resolveProjectDefinitions({
+        baseDir: fixtureDir,
+        explicit: { commands: [userCommand, duplicateUserCommand] },
+      }),
+    ).rejects.toThrow('Duplicate command key "userCommand:Info"')
   })
 })

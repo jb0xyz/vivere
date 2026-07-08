@@ -20,6 +20,18 @@ export interface CommandDescriptor {
   options: OptionDescriptor[]
 }
 
+export interface UserCommandDescriptor {
+  kind: 'userCommand'
+  name: string
+}
+
+export interface MessageCommandDescriptor {
+  kind: 'messageCommand'
+  name: string
+}
+
+export type ApplicationCommandDescriptor = CommandDescriptor | UserCommandDescriptor | MessageCommandDescriptor
+
 export interface ParamDescriptor {
   name: string
   kind: ParamKind

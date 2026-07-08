@@ -2,6 +2,7 @@ import { readdir } from 'node:fs/promises'
 import { basename, extname, join, relative, resolve } from 'node:path'
 import { pathToFileURL } from 'node:url'
 import type {
+  ApplicationCommandDefinition,
   ButtonDefinition,
   CommandDefinition,
   ComponentDefinition,
@@ -9,12 +10,18 @@ import type {
   ModalDefinition,
   SelectDefinition,
 } from '../authoring/create-vivere.js'
+import { getApplicationCommandKey } from '../internal/application-command-key.js'
 import { assertUnique } from '../internal/collections.js'
 
-type DiscoverableDefinition = ButtonDefinition | CommandDefinition | EventDefinition | ModalDefinition | SelectDefinition
+type DiscoverableDefinition<TServices = unknown> =
+  | ApplicationCommandDefinition<TServices>
+  | ButtonDefinition<TServices>
+  | EventDefinition<TServices>
+  | ModalDefinition<TServices>
+  | SelectDefinition<TServices>
 type DefinitionKind = DiscoverableDefinition['descriptor']['kind']
 type DefinitionByKind<TServices, TKind extends DefinitionKind> = TKind extends 'command'
-  ? CommandDefinition<TServices>
+  ? ApplicationCommandDefinition<TServices>
   : TKind extends 'event'
     ? EventDefinition<TServices>
     : TKind extends 'button'
@@ -53,13 +60,16 @@ async function nativeImport(absPath: string): Promise<unknown> {
   return import(pathToFileURL(absPath).href)
 }
 
-async function importDefault(path: string, importer: (absPath: string) => Promise<unknown>): Promise<DiscoverableDefinition> {
+async function importDefault<TServices>(
+  path: string,
+  importer: (absPath: string) => Promise<unknown>,
+): Promise<DiscoverableDefinition<TServices>> {
   const mod = await importer(path)
   const value = mod && typeof mod === 'object' && 'default' in mod ? mod.default : mod
   if (!value || typeof value !== 'object' || !('descriptor' in value)) {
     throw new Error(`Expected default export from ${path}`)
   }
-  return value as DiscoverableDefinition
+  return value as DiscoverableDefinition<TServices>
 }
 
 function getFileBaseName(path: string): string {
@@ -86,6 +96,16 @@ function getExpectedCommandName(path: string, route: string[]): string {
   return fileName === 'index' ? route[route.length - 1] ?? '' : fileName
 }
 
+function isApplicationCommandDefinition<TServices>(
+  value: DiscoverableDefinition<TServices>,
+): value is ApplicationCommandDefinition<TServices> {
+  return (
+    value.descriptor.kind === 'command' ||
+    value.descriptor.kind === 'userCommand' ||
+    value.descriptor.kind === 'messageCommand'
+  )
+}
+
 async function discover<TServices, TKind extends DefinitionKind>(
   dir: string,
   kind: TKind,
@@ -98,7 +118,7 @@ async function discover<TServices, TKind extends DefinitionKind>(
   )
   const definitionList = await Promise.all(
     fileList.map(async (file) => {
-      const value = await importDefault(file, importer)
+      const value = await importDefault<TServices>(file, importer)
       if (value.descriptor.kind !== kind) throw new Error(`Expected ${kind} default export from ${file}`)
       if (kind === 'command') {
         const command = value as CommandDefinition<TServices>
@@ -138,6 +158,43 @@ async function discover<TServices, TKind extends DefinitionKind>(
   return definitionList
 }
 
+async function discoverApplicationCommandDefinitions<TServices>(
+  dir: string,
+  options: DiscoverOptions = {},
+): Promise<ApplicationCommandDefinition<TServices>[]> {
+  const importer = options.import ?? nativeImport
+  const root = resolve(dir)
+  const fileList = (await collectFileList(root, true)).filter((file) => !isRootIndexFile(root, file))
+  const definitionList = await Promise.all(
+    fileList.map(async (file) => {
+      const value = await importDefault<TServices>(file, importer)
+      if (!isApplicationCommandDefinition<TServices>(value)) {
+        throw new Error(`Expected command default export from ${file}`)
+      }
+      if (value.descriptor.kind !== 'command') return value
+
+      const command = value as CommandDefinition<TServices>
+      const route = getCommandRoute(root, file)
+      const expectedName = getExpectedCommandName(file, route)
+      if (command.descriptor.name !== expectedName) {
+        throw new Error(`Command name "${command.descriptor.name}" must match file name "${expectedName}"`)
+      }
+      return {
+        ...command,
+        descriptor: { ...command.descriptor, route },
+      }
+    }),
+  )
+
+  definitionList.sort((a, b) => getApplicationCommandKey(a.descriptor).localeCompare(getApplicationCommandKey(b.descriptor)))
+  assertUnique(
+    definitionList.map((definition) => getApplicationCommandKey(definition.descriptor)),
+    'command key',
+  )
+
+  return definitionList
+}
+
 async function discoverComponentDefinitions<TServices>(
   dir: string,
   options: DiscoverOptions = {},
@@ -146,7 +203,7 @@ async function discoverComponentDefinitions<TServices>(
   const fileList = await collectFileList(resolve(dir))
   const definitionList = await Promise.all(
     fileList.map(async (file) => {
-      const value = await importDefault(file, importer)
+      const value = await importDefault<TServices>(file, importer)
       if (
         value.descriptor.kind !== 'button' &&
         value.descriptor.kind !== 'select' &&
@@ -171,8 +228,8 @@ async function discoverComponentDefinitions<TServices>(
 export async function discoverCommands<TServices = unknown>(
   dir: string,
   options: DiscoverOptions = {},
-): Promise<CommandDefinition<TServices>[]> {
-  return discover<TServices, 'command'>(dir, 'command', options)
+): Promise<ApplicationCommandDefinition<TServices>[]> {
+  return discoverApplicationCommandDefinitions<TServices>(dir, options)
 }
 
 export async function discoverEvents<TServices = unknown>(

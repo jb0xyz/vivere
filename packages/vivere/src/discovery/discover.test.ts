@@ -1,5 +1,6 @@
 import { fileURLToPath } from 'node:url'
 import { describe, expect, test } from 'vitest'
+import type { CommandDefinition } from '../authoring/create-vivere.js'
 import { discoverButtons, discoverCommands, discoverComponents, discoverEvents } from './discover.js'
 
 const fixtureDir = fileURLToPath(new URL('__fixtures__', import.meta.url))
@@ -13,8 +14,11 @@ describe('discovery', () => {
 
   test('discovers command routes from folders and index metadata files', async () => {
     const commands = await discoverCommands(`${fixtureDir}/commands/routes`)
+    const slashCommandList = commands.filter(
+      (command): command is CommandDefinition => command.descriptor.kind === 'command',
+    )
 
-    expect(commands.map((command) => ({
+    expect(slashCommandList.map((command) => ({
       name: command.descriptor.name,
       description: command.descriptor.description,
       route: command.descriptor.route,
@@ -24,6 +28,15 @@ describe('discovery', () => {
       { name: 'ban', description: 'Ban a user', route: ['admin', 'ban'], hasExecute: true },
       { name: 'user', description: 'User commands', route: ['admin', 'user'], hasExecute: false },
       { name: 'add', description: 'Add a user', route: ['admin', 'user', 'add'], hasExecute: true },
+    ])
+  })
+
+  test('discovers context menu commands in command roots', async () => {
+    const commands = await discoverCommands(`${fixtureDir}/commands/context`)
+
+    expect(commands.map((command) => command.descriptor)).toEqual([
+      { kind: 'messageCommand', name: 'Report Message' },
+      { kind: 'userCommand', name: 'User Info' },
     ])
   })
 
@@ -66,8 +79,11 @@ describe('discovery', () => {
 
   test('allows the same command leaf name in different routes', async () => {
     const commands = await discoverCommands(`${fixtureDir}/commands/duplicates`)
+    const slashCommandList = commands.filter(
+      (command): command is CommandDefinition => command.descriptor.kind === 'command',
+    )
 
-    expect(commands.map((command) => command.descriptor.route)).toEqual([
+    expect(slashCommandList.map((command) => command.descriptor.route)).toEqual([
       ['a', 'ping'],
       ['b', 'ping'],
     ])

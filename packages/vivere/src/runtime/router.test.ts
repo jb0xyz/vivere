@@ -5,12 +5,14 @@ import { decodeCustomId, encodeCustomId } from '../components/custom-id.js'
 import type { AutocompleteInteractionAdapter } from './interaction-adapter.js'
 import type { ButtonInteractionAdapter } from './interaction-adapter.js'
 import type { ChatInputInteractionAdapter } from './interaction-adapter.js'
+import type { MessageCommandInteractionAdapter } from './interaction-adapter.js'
 import type { ModalInteractionAdapter } from './interaction-adapter.js'
 import type { SelectInteractionAdapter } from './interaction-adapter.js'
+import type { UserCommandInteractionAdapter } from './interaction-adapter.js'
 import { createRouter } from './router.js'
 
 const secret = 'secret'
-const { defineButton, defineCommand, defineModal, defineSelect, field, opt, param } =
+const { defineButton, defineCommand, defineMessageCommand, defineModal, defineSelect, defineUserCommand, field, opt, param } =
   createVivere<{ mark: () => void }>()
 
 function fakeAdapter(
@@ -56,6 +58,67 @@ test('dispatches to the matching command and builds ctx', async () => {
 
   expect(mark).toHaveBeenCalledOnce()
   expect(adapter.replied).toEqual(['Pong!'])
+})
+
+test('dispatches a user context menu command with target user', async () => {
+  let seen: unknown
+  const mark = vi.fn()
+  const userInfo = defineUserCommand({
+    name: 'Info',
+    async execute(ctx) {
+      ctx.services.mark()
+      seen = ctx.targetUser
+      await ctx.reply('user')
+    },
+  })
+  const slashInfo = defineCommand({ name: 'Info', description: 'Info', async execute() {} })
+  const router = createRouter({ commands: [slashInfo, userInfo], buttons: [], secret })
+  const adapter: UserCommandInteractionAdapter & { replied: string[] } = {
+    kind: 'userCommand',
+    commandName: 'Info',
+    targetUser: { username: 'Ada' },
+    replied: [],
+    async reply(input) {
+      this.replied.push(typeof input === 'string' ? input : input.content)
+    },
+    async deferReply() {},
+  }
+
+  await router.dispatch(adapter, { services: { mark } })
+
+  expect(mark).toHaveBeenCalledOnce()
+  expect(seen).toEqual({ username: 'Ada' })
+  expect(adapter.replied).toEqual(['user'])
+})
+
+test('dispatches a message context menu command with target message', async () => {
+  let seen: unknown
+  const mark = vi.fn()
+  const report = defineMessageCommand({
+    name: 'Report',
+    async execute(ctx) {
+      ctx.services.mark()
+      seen = ctx.targetMessage
+      await ctx.reply({ content: 'reported', ephemeral: true })
+    },
+  })
+  const router = createRouter({ commands: [report], buttons: [], secret })
+  const adapter: MessageCommandInteractionAdapter & { replied: string[] } = {
+    kind: 'messageCommand',
+    commandName: 'Report',
+    targetMessage: { id: 'message-1' },
+    replied: [],
+    async reply(input) {
+      this.replied.push(typeof input === 'string' ? input : input.content)
+    },
+    async deferReply() {},
+  }
+
+  await router.dispatch(adapter, { services: { mark } })
+
+  expect(mark).toHaveBeenCalledOnce()
+  expect(seen).toEqual({ id: 'message-1' })
+  expect(adapter.replied).toEqual(['reported'])
 })
 
 test('resolves declared options into ctx.options by their TS keys', async () => {

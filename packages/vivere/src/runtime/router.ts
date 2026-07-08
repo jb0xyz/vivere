@@ -1,8 +1,16 @@
-import type { ButtonDefinition, CommandDefinition, ComponentDefinition } from '../authoring/create-vivere.js'
-import type { CommandContext } from '../authoring/types.js'
+import type {
+  ApplicationCommandDefinition,
+  ButtonDefinition,
+  CommandDefinition,
+  ComponentDefinition,
+  MessageCommandDefinition,
+  UserCommandDefinition,
+} from '../authoring/create-vivere.js'
+import type { CommandContext, MessageCommandContext, UserCommandContext } from '../authoring/types.js'
 import type { ComponentRegistry } from '../components/component-handler.js'
 import { getComponentRegistryKey, handleComponent } from '../components/component-handler.js'
 import { createComponentsBuilder, createModalSpec } from '../components/component-builder.js'
+import { getApplicationCommandKey } from '../internal/application-command-key.js'
 import { createRegistry } from '../internal/collections.js'
 import type { ErrorReporter } from '../internal/errors.js'
 import { reportError as defaultReportError } from '../internal/errors.js'
@@ -10,6 +18,8 @@ import type {
   AutocompleteInteractionAdapter,
   ChatInputInteractionAdapter,
   InteractionAdapter,
+  MessageCommandInteractionAdapter,
+  UserCommandInteractionAdapter,
 } from './interaction-adapter.js'
 
 export interface DispatchDeps<TServices> {
@@ -17,7 +27,7 @@ export interface DispatchDeps<TServices> {
 }
 
 export interface CreateRouterOptions<TServices> {
-  commands: CommandDefinition<TServices>[]
+  commands: ApplicationCommandDefinition<TServices>[]
   buttons?: ButtonDefinition<TServices>[]
   components?: ComponentDefinition<TServices>[]
   secret: string
@@ -29,7 +39,22 @@ export interface InteractionRouter<TServices = unknown> {
 }
 
 export function createRouter<TServices>(options: CreateRouterOptions<TServices>): InteractionRouter<TServices> {
-  const commandRegistry = createRegistry(options.commands, (command) => command.descriptor.route.join('/'))
+  const commandRegistry = createRegistry(
+    options.commands.filter((command): command is CommandDefinition<TServices> => command.descriptor.kind === 'command'),
+    (command) => command.descriptor.route.join('/'),
+  )
+  const userCommandRegistry = createRegistry(
+    options.commands.filter(
+      (command): command is UserCommandDefinition<TServices> => command.descriptor.kind === 'userCommand',
+    ),
+    (command) => getApplicationCommandKey(command.descriptor),
+  )
+  const messageCommandRegistry = createRegistry(
+    options.commands.filter(
+      (command): command is MessageCommandDefinition<TServices> => command.descriptor.kind === 'messageCommand',
+    ),
+    (command) => getApplicationCommandKey(command.descriptor),
+  )
   const componentList = [...(options.buttons ?? []), ...(options.components ?? [])]
   const componentRegistry: ComponentRegistry<TServices> = createRegistry(componentList, (component) =>
     getComponentRegistryKey(component.descriptor.componentKind, component.descriptor.id),
@@ -89,6 +114,48 @@ export function createRouter<TServices>(options: CreateRouterOptions<TServices>)
     }
   }
 
+  async function dispatchUserCommand(
+    adapter: UserCommandInteractionAdapter,
+    deps: DispatchDeps<TServices>,
+  ): Promise<void> {
+    const command = userCommandRegistry.get(`userCommand:${adapter.commandName}`)
+    if (!command) return
+
+    const ctx: UserCommandContext<TServices> = {
+      services: deps.services,
+      targetUser: adapter.targetUser,
+      reply: (input) => adapter.reply(input),
+      defer: (input) => adapter.deferReply(input),
+    }
+
+    try {
+      await command.execute(ctx)
+    } catch (error) {
+      reportError(error, { phase: 'command', kind: 'userCommand', id: adapter.commandName })
+    }
+  }
+
+  async function dispatchMessageCommand(
+    adapter: MessageCommandInteractionAdapter,
+    deps: DispatchDeps<TServices>,
+  ): Promise<void> {
+    const command = messageCommandRegistry.get(`messageCommand:${adapter.commandName}`)
+    if (!command) return
+
+    const ctx: MessageCommandContext<TServices> = {
+      services: deps.services,
+      targetMessage: adapter.targetMessage,
+      reply: (input) => adapter.reply(input),
+      defer: (input) => adapter.deferReply(input),
+    }
+
+    try {
+      await command.execute(ctx)
+    } catch (error) {
+      reportError(error, { phase: 'command', kind: 'messageCommand', id: adapter.commandName })
+    }
+  }
+
   return {
     async dispatch(adapter, deps) {
       switch (adapter.kind) {
@@ -97,6 +164,12 @@ export function createRouter<TServices>(options: CreateRouterOptions<TServices>)
           return
         case 'autocomplete':
           await dispatchAutocomplete(adapter, deps)
+          return
+        case 'userCommand':
+          await dispatchUserCommand(adapter, deps)
+          return
+        case 'messageCommand':
+          await dispatchMessageCommand(adapter, deps)
           return
         case 'button':
         case 'select':

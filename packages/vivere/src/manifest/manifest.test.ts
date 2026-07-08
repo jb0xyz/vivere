@@ -2,7 +2,18 @@ import { expect, test } from 'vitest'
 import { createVivere } from '../authoring/create-vivere.js'
 import { buildManifest, manifestToJson } from './manifest.js'
 
-const { defineButton, defineCommand, defineEvent, defineModal, defineSelect, field, opt, param } = createVivere()
+const {
+  defineButton,
+  defineCommand,
+  defineEvent,
+  defineMessageCommand,
+  defineModal,
+  defineSelect,
+  defineUserCommand,
+  field,
+  opt,
+  param,
+} = createVivere()
 
 test('builds deterministic manifests without function fields', () => {
   const askCommand = defineCommand({
@@ -19,6 +30,8 @@ test('builds deterministic manifests without function fields', () => {
     description: 'Pong',
     async execute() {},
   })
+  const userInfoCommand = defineUserCommand({ name: 'User Info', async execute() {} })
+  const reportCommand = defineMessageCommand({ name: 'Report', async execute() {} })
   const readyEvent = defineEvent({ name: 'ready', once: true, async execute() {} })
   const joinEvent = defineEvent({ name: 'guildMemberAdd', async execute() {} })
   const confirmButton = defineButton({
@@ -43,7 +56,7 @@ test('builds deterministic manifests without function fields', () => {
   })
 
   const manifest = buildManifest({
-    commands: [pingCommand.descriptor, askCommand.descriptor],
+    commands: [pingCommand.descriptor, askCommand.descriptor, userInfoCommand.descriptor, reportCommand.descriptor],
     events: [readyEvent.descriptor, joinEvent.descriptor],
     components: [confirmButton.descriptor, cancelButton.descriptor, pickRoleSelect.descriptor, feedbackModal.descriptor],
   })
@@ -76,6 +89,8 @@ test('builds deterministic manifests without function fields', () => {
         ],
       },
       { kind: 'command', name: 'ping', description: 'Pong', route: ['ping'], options: [] },
+      { kind: 'messageCommand', name: 'Report' },
+      { kind: 'userCommand', name: 'User Info' },
     ],
     events: [
       { kind: 'event', name: 'guildMemberAdd', once: false },
@@ -108,7 +123,7 @@ test('builds deterministic manifests without function fields', () => {
   expect(
     manifestToJson(
       buildManifest({
-        commands: [askCommand.descriptor, pingCommand.descriptor],
+        commands: [askCommand.descriptor, reportCommand.descriptor, pingCommand.descriptor, userInfoCommand.descriptor],
         events: [joinEvent.descriptor, readyEvent.descriptor],
         components: [pickRoleSelect.descriptor, cancelButton.descriptor, feedbackModal.descriptor, confirmButton.descriptor],
       }),

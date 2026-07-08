@@ -1,5 +1,6 @@
 export { createVivere } from './authoring/create-vivere.js'
 export type {
+  ApplicationCommandDefinition,
   ButtonDefinition,
   ButtonInput,
   CommandDefinition,
@@ -7,6 +8,8 @@ export type {
   ComponentDefinition,
   EventDefinition,
   EventInput,
+  MessageCommandDefinition,
+  MessageCommandInput,
   ModalDefinition,
   ModalInput,
   ParamCodec,
@@ -14,17 +17,22 @@ export type {
   PluginInput,
   SelectDefinition,
   SelectInput,
+  UserCommandDefinition,
+  UserCommandInput,
 } from './authoring/create-vivere.js'
 export type {
+  ApplicationCommandDescriptor,
   ButtonDescriptor,
   CommandDescriptor,
   ComponentDescriptor,
   EventDescriptor,
   FieldDescriptor,
+  MessageCommandDescriptor,
   ModalDescriptor,
   OptionDescriptor,
   ParamDescriptor,
   SelectDescriptor,
+  UserCommandDescriptor,
 } from './authoring/ir.js'
 export { opt } from './authoring/opt.js'
 export type {
@@ -55,6 +63,7 @@ export type {
   ComponentSpec,
   ComponentsBuilder,
   EventContext,
+  MessageCommandContext,
   ModalContext,
   ModalDefinitionForParams,
   ModalFieldSpec,
@@ -67,6 +76,7 @@ export type {
   SelectSpec,
   ShowModalOptions,
   DeferInput,
+  UserCommandContext,
 } from './authoring/types.js'
 export { createApp } from './runtime/create-app.js'
 export type {
@@ -75,4 +85,5 @@ export type {
   AppDiscoveryConfig,
   CreateAppOptions,
 } from './runtime/create-app.js'
+export type { ErrorContext, ErrorPhase, ErrorReporter } from './internal/errors.js'
 export { GatewayIntentBits } from 'discord.js'

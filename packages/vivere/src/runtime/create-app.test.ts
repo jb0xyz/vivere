@@ -1,8 +1,8 @@
 import { resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { describe, expect, test } from 'vitest'
+import { describe, expect, test, vi } from 'vitest'
 import { createVivere } from '../authoring/create-vivere.js'
-import { resolveDefinitions } from './create-app.js'
+import { createAppErrorReporter, resolveDefinitions } from './create-app.js'
 
 const fixtureDir = fileURLToPath(new URL('../discovery/__fixtures__', import.meta.url))
 const { defineButton, defineCommand, defineEvent } = createVivere()
@@ -68,7 +68,7 @@ describe('resolveDefinitions', () => {
         commands: [duplicateCommand],
         discover: { commands: 'valid/commands' },
       }),
-    ).rejects.toThrow('Duplicate command name "ping"')
+    ).rejects.toThrow('Duplicate command key "command:ping"')
     await expect(
       resolveDefinitions({
         cwd: fixtureDir,
@@ -94,4 +94,25 @@ describe('resolveDefinitions', () => {
     expect(definitions.commands.map((item) => item.descriptor.name)).toEqual(['ask', 'ping'])
     expect(importedPathList.every((item) => item.startsWith(resolve(fixtureDir)))).toBe(true)
   })
+})
+
+test('uses app-level onError when provided', () => {
+  const onError = vi.fn()
+  const error = new Error('failed')
+  const reportError = createAppErrorReporter({ onError })
+
+  reportError(error, { phase: 'command', id: 'ping' })
+
+  expect(onError).toHaveBeenCalledWith(error, { phase: 'command', id: 'ping' })
+})
+
+test('uses the default console reporter when onError is not provided', () => {
+  const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {})
+  const error = new Error('failed')
+  const reportError = createAppErrorReporter({})
+
+  reportError(error, { phase: 'event', id: 'ready' })
+
+  expect(consoleError).toHaveBeenCalledWith(error)
+  consoleError.mockRestore()
 })

@@ -100,6 +100,20 @@ export interface CommandContext<TOptions, TServices> {
   ): Promise<void>
 }
 
+export interface UserCommandContext<TServices, TTargetUser = unknown> {
+  services: TServices
+  targetUser: TTargetUser
+  reply(input: ReplyInput): Promise<void>
+  defer(input?: DeferInput): Promise<void>
+}
+
+export interface MessageCommandContext<TServices, TTargetMessage = unknown> {
+  services: TServices
+  targetMessage: TTargetMessage
+  reply(input: ReplyInput): Promise<void>
+  defer(input?: DeferInput): Promise<void>
+}
+
 export interface EventContext<TServices, TClient = unknown> {
   services: TServices
   client: TClient

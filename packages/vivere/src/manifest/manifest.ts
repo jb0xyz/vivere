@@ -1,4 +1,9 @@
-import type { CommandDescriptor, ComponentDescriptor, EventDescriptor, ParamDescriptor } from '../authoring/ir.js'
+import type {
+  ApplicationCommandDescriptor,
+  ComponentDescriptor,
+  EventDescriptor,
+  ParamDescriptor,
+} from '../authoring/ir.js'
 import { serializeCommand, type SerializedCommand } from './serialize.js'
 
 export type SerializedEvent = EventDescriptor
@@ -15,7 +20,7 @@ export interface Manifest {
 }
 
 export interface BuildManifestInput {
-  commands: CommandDescriptor[]
+  commands: ApplicationCommandDescriptor[]
   events: EventDescriptor[]
   components: ComponentDescriptor[]
 }

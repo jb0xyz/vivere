@@ -1,11 +1,22 @@
-import type { Client, GuildMember, User } from 'discord.js'
+import type { Client, GuildMember, Message, User } from 'discord.js'
 import { expectTypeOf } from 'expect-type'
 import { createVivere } from './create-vivere.js'
 import { createApp } from '../runtime/create-app.js'
 
 type Services = { logger: { info(msg: string): void } }
-const { defineButton, defineCommand, defineEvent, defineModal, definePlugin, defineSelect, field, opt, param } =
-  createVivere<Services>()
+const {
+  defineButton,
+  defineCommand,
+  defineEvent,
+  defineMessageCommand,
+  defineModal,
+  definePlugin,
+  defineSelect,
+  defineUserCommand,
+  field,
+  opt,
+  param,
+} = createVivere<Services>()
 
 const feedbackModal = defineModal({
   id: 'feedback',
@@ -108,9 +119,27 @@ const joinEvent = defineEvent({
   },
 })
 
+const userInfoCommand = defineUserCommand({
+  name: 'User Info',
+  async execute(ctx) {
+    expectTypeOf(ctx.targetUser).toEqualTypeOf<User>()
+    expectTypeOf(ctx.services).toEqualTypeOf<Services>()
+    await ctx.reply({ content: ctx.targetUser.username, ephemeral: true })
+  },
+})
+
+const reportMessageCommand = defineMessageCommand({
+  name: 'Report',
+  async execute(ctx) {
+    expectTypeOf(ctx.targetMessage).toEqualTypeOf<Message>()
+    expectTypeOf(ctx.services).toEqualTypeOf<Services>()
+    await ctx.reply({ content: ctx.targetMessage.id, ephemeral: true })
+  },
+})
+
 const demoPlugin = definePlugin({
   name: 'demo',
-  commands: [demoCommand],
+  commands: [demoCommand, userInfoCommand],
   events: [joinEvent],
   components: [confirmButton, pickRoleSelect, feedbackModal],
 })
@@ -118,7 +147,7 @@ const demoPlugin = definePlugin({
 createApp({
   config: { token: 'token', intents: [] },
   createServices: async () => ({ logger: { info() {} }, extra: true }),
-  commands: [demoCommand],
+  commands: [demoCommand, reportMessageCommand],
   buttons: [confirmButton],
   components: [pickRoleSelect, feedbackModal],
   events: [joinEvent],
@@ -128,7 +157,7 @@ createApp({
 createApp({
   config: { token: 'token', intents: [] },
   createServices: async () => ({ logger: { info() {} } }),
-  commands: [demoCommand],
+  commands: [demoCommand, userInfoCommand],
   buttons: [confirmButton],
   components: [pickRoleSelect, feedbackModal],
   events: [joinEvent],

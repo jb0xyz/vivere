@@ -1,15 +1,25 @@
-import type { Client, ClientEvents } from 'discord.js'
-import type { ButtonContext, CommandContext, EventContext, ModalContext, SelectContext } from './types.js'
+import type { Client, ClientEvents, Message, User } from 'discord.js'
+import type {
+  ButtonContext,
+  CommandContext,
+  EventContext,
+  MessageCommandContext,
+  ModalContext,
+  SelectContext,
+  UserCommandContext,
+} from './types.js'
 import type {
   ButtonDescriptor,
   CommandDescriptor,
   ComponentDescriptor,
   EventDescriptor,
   FieldDescriptor,
+  MessageCommandDescriptor,
   ModalDescriptor,
   OptionDescriptor,
   ParamDescriptor,
   SelectDescriptor,
+  UserCommandDescriptor,
 } from './ir.js'
 import { toDiscordName } from './naming.js'
 import type { AutocompleteResolver, InferOptions, OptionsRecord } from './opt.js'
@@ -36,6 +46,31 @@ export interface CommandInput<TOptions extends OptionsRecord<TServices>, TServic
   options?: TOptions
   execute?(ctx: CommandContext<InferOptions<TOptions>, TServices>): Promise<void>
 }
+
+export interface UserCommandDefinition<TServices = unknown> {
+  readonly descriptor: UserCommandDescriptor
+  readonly execute: (ctx: UserCommandContext<TServices>) => Promise<void>
+}
+
+export interface UserCommandInput<TServices> {
+  name: string
+  execute(ctx: UserCommandContext<TServices, User>): Promise<void>
+}
+
+export interface MessageCommandDefinition<TServices = unknown> {
+  readonly descriptor: MessageCommandDescriptor
+  readonly execute: (ctx: MessageCommandContext<TServices>) => Promise<void>
+}
+
+export interface MessageCommandInput<TServices> {
+  name: string
+  execute(ctx: MessageCommandContext<TServices, Message>): Promise<void>
+}
+
+export type ApplicationCommandDefinition<TServices = unknown> =
+  | CommandDefinition<TServices>
+  | UserCommandDefinition<TServices>
+  | MessageCommandDefinition<TServices>
 
 export interface EventDefinition<TServices = unknown> {
   readonly descriptor: EventDescriptor
@@ -100,14 +135,14 @@ export type ComponentDefinition<TServices = unknown> =
 
 export interface PluginDefinition<TServices = unknown> {
   readonly name: string
-  readonly commands: CommandDefinition<TServices>[]
+  readonly commands: ApplicationCommandDefinition<TServices>[]
   readonly events: EventDefinition<TServices>[]
   readonly components: ComponentDefinition<TServices>[]
 }
 
 export interface PluginInput<TServices> {
   name: string
-  commands?: CommandDefinition<TServices>[]
+  commands?: ApplicationCommandDefinition<TServices>[]
   events?: EventDefinition<TServices>[]
   components?: ComponentDefinition<TServices>[]
 }
@@ -237,6 +272,28 @@ export function createVivere<TServices>() {
     }
   }
 
+  function defineUserCommand(input: UserCommandInput<TServices>): UserCommandDefinition<TServices> {
+    const descriptor: UserCommandDescriptor = {
+      kind: 'userCommand',
+      name: input.name,
+    }
+    return {
+      descriptor,
+      execute: input.execute as UserCommandDefinition<TServices>['execute'],
+    }
+  }
+
+  function defineMessageCommand(input: MessageCommandInput<TServices>): MessageCommandDefinition<TServices> {
+    const descriptor: MessageCommandDescriptor = {
+      kind: 'messageCommand',
+      name: input.name,
+    }
+    return {
+      descriptor,
+      execute: input.execute as MessageCommandDefinition<TServices>['execute'],
+    }
+  }
+
   function defineButton<TParams extends ParamsRecord = Record<string, never>>(
     input: ButtonInput<TParams, TServices>,
   ): ButtonDefinition<TServices, TParams> {
@@ -283,5 +340,17 @@ export function createVivere<TServices>() {
     }
   }
 
-  return { defineCommand, defineEvent, defineButton, defineSelect, defineModal, definePlugin, opt: boundOpt, param, field }
+  return {
+    defineCommand,
+    defineUserCommand,
+    defineMessageCommand,
+    defineEvent,
+    defineButton,
+    defineSelect,
+    defineModal,
+    definePlugin,
+    opt: boundOpt,
+    param,
+    field,
+  }
 }

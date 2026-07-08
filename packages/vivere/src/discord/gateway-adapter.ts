@@ -3,9 +3,11 @@ import type {
   ButtonInteraction,
   ChatInputCommandInteraction,
   Interaction,
+  MessageContextMenuCommandInteraction,
   ModalData,
   ModalSubmitInteraction,
   StringSelectMenuInteraction,
+  UserContextMenuCommandInteraction,
 } from 'discord.js'
 import { ComponentType } from 'discord.js'
 import type { ReplyInput } from '../authoring/types.js'
@@ -13,8 +15,10 @@ import type {
   AutocompleteInteractionAdapter,
   ButtonInteractionAdapter,
   ChatInputInteractionAdapter,
+  MessageCommandInteractionAdapter,
   ModalInteractionAdapter,
   SelectInteractionAdapter,
+  UserCommandInteractionAdapter,
 } from '../runtime/interaction-adapter.js'
 import type { InteractionRouter } from '../runtime/router.js'
 import { DISCORD_OPTION_KIND } from './option-kinds.js'
@@ -60,6 +64,36 @@ export function toAutocompleteAdapter(interaction: AutocompleteInteraction): Aut
     focusedValue: String(focused.value),
     async respond(choices) {
       await interaction.respond(choices)
+    },
+  }
+}
+
+export function toUserCommandAdapter(interaction: UserContextMenuCommandInteraction): UserCommandInteractionAdapter {
+  return {
+    kind: 'userCommand',
+    commandName: interaction.commandName,
+    targetUser: interaction.targetUser,
+    async reply(input) {
+      await interaction.reply(renderInteractionReply(input))
+    },
+    async deferReply(input) {
+      await interaction.deferReply(renderInteractionDefer(input))
+    },
+  }
+}
+
+export function toMessageCommandAdapter(
+  interaction: MessageContextMenuCommandInteraction,
+): MessageCommandInteractionAdapter {
+  return {
+    kind: 'messageCommand',
+    commandName: interaction.commandName,
+    targetMessage: interaction.targetMessage,
+    async reply(input) {
+      await interaction.reply(renderInteractionReply(input))
+    },
+    async deferReply(input) {
+      await interaction.deferReply(renderInteractionDefer(input))
     },
   }
 }
@@ -139,6 +173,20 @@ export async function handleInteraction<TServices>(
 
   if (interaction.isChatInputCommand()) {
     const adapter = toChatInputAdapter(interaction)
+    const services = await createServices()
+    await router.dispatch(adapter, { services })
+    return
+  }
+
+  if (interaction.isUserContextMenuCommand()) {
+    const adapter = toUserCommandAdapter(interaction)
+    const services = await createServices()
+    await router.dispatch(adapter, { services })
+    return
+  }
+
+  if (interaction.isMessageContextMenuCommand()) {
+    const adapter = toMessageCommandAdapter(interaction)
     const services = await createServices()
     await router.dispatch(adapter, { services })
     return

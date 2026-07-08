@@ -1,7 +1,7 @@
 import { ApplicationCommandType } from 'discord.js'
 import type { APIApplicationCommandOption, RESTPostAPIApplicationCommandsJSONBody } from 'discord.js'
 import { ApplicationCommandOptionType } from 'discord.js'
-import type { CommandDescriptor } from '../authoring/ir.js'
+import type { ApplicationCommandDescriptor, CommandDescriptor } from '../authoring/ir.js'
 import { DISCORD_OPTION_KIND } from './option-kinds.js'
 
 function serializeCommandOptions(descriptor: CommandDescriptor): APIApplicationCommandOption[] {
@@ -38,13 +38,35 @@ function compareRoute(a: CommandDescriptor, b: CommandDescriptor): number {
   return a.route.join('/').localeCompare(b.route.join('/'))
 }
 
-export function buildCommandTree(descriptors: CommandDescriptor[]): RESTPostAPIApplicationCommandsJSONBody[] {
-  const rootList = descriptors
+function toContextCommandJSON(descriptor: ApplicationCommandDescriptor): RESTPostAPIApplicationCommandsJSONBody {
+  if (descriptor.kind === 'userCommand') {
+    return {
+      name: descriptor.name,
+      type: ApplicationCommandType.User,
+    }
+  }
+
+  if (descriptor.kind === 'messageCommand') {
+    return {
+      name: descriptor.name,
+      type: ApplicationCommandType.Message,
+    }
+  }
+
+  return toCommandJSON(descriptor)
+}
+
+export function buildCommandTree(descriptors: ApplicationCommandDescriptor[]): RESTPostAPIApplicationCommandsJSONBody[] {
+  const slashDescriptorList = descriptors.filter((descriptor): descriptor is CommandDescriptor => descriptor.kind === 'command')
+  const contextDescriptorList = descriptors
+    .filter((descriptor) => descriptor.kind === 'userCommand' || descriptor.kind === 'messageCommand')
+    .sort((a, b) => a.name.localeCompare(b.name) || a.kind.localeCompare(b.kind))
+  const rootList = slashDescriptorList
     .filter((descriptor) => descriptor.route.length === 1)
     .sort(compareRoute)
 
-  return rootList.map((root) => {
-    const childList = descriptors
+  const slashCommandList = rootList.map((root) => {
+    const childList = slashDescriptorList
       .filter((descriptor) => descriptor.route.length > 1 && descriptor.route[0] === root.route[0])
       .sort(compareRoute)
 
@@ -53,7 +75,7 @@ export function buildCommandTree(descriptors: CommandDescriptor[]): RESTPostAPIA
     const subcommandList = childList
       .filter((descriptor) => descriptor.route.length === 2)
       .filter((descriptor) =>
-        !descriptors.some((candidate) =>
+        !slashDescriptorList.some((candidate) =>
           candidate.route.length === 3 &&
           candidate.route[0] === descriptor.route[0] &&
           candidate.route[1] === descriptor.route[1],
@@ -64,7 +86,7 @@ export function buildCommandTree(descriptors: CommandDescriptor[]): RESTPostAPIA
     const groupList = childList
       .filter((descriptor) => descriptor.route.length === 2)
       .filter((descriptor) =>
-        descriptors.some((candidate) =>
+        slashDescriptorList.some((candidate) =>
           candidate.route.length === 3 &&
           candidate.route[0] === descriptor.route[0] &&
           candidate.route[1] === descriptor.route[1],
@@ -74,7 +96,7 @@ export function buildCommandTree(descriptors: CommandDescriptor[]): RESTPostAPIA
         name: group.name,
         description: group.description,
         type: ApplicationCommandOptionType.SubcommandGroup,
-        options: descriptors
+        options: slashDescriptorList
           .filter((descriptor) =>
             descriptor.route.length === 3 &&
             descriptor.route[0] === group.route[0] &&
@@ -91,4 +113,6 @@ export function buildCommandTree(descriptors: CommandDescriptor[]): RESTPostAPIA
       options: [...subcommandList, ...groupList],
     }
   })
+
+  return [...slashCommandList, ...contextDescriptorList.map(toContextCommandJSON)]
 }

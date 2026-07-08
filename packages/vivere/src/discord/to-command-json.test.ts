@@ -3,7 +3,7 @@ import { expect, test } from 'vitest'
 import { createVivere } from '../authoring/create-vivere.js'
 import { buildCommandTree, toCommandJSON } from './to-command-json.js'
 
-const { defineCommand, opt } = createVivere()
+const { defineCommand, defineMessageCommand, defineUserCommand, opt } = createVivere()
 
 test('maps options to Discord types and lists required ones first', () => {
   const cmd = defineCommand({
@@ -95,6 +95,29 @@ test('builds nested Discord command JSON from command routes', () => {
           ],
         },
       ],
+    },
+  ])
+})
+
+test('builds context menu command JSON beside slash commands', () => {
+  const ping = defineCommand({ name: 'ping', description: 'Pong', async execute() {} })
+  const userInfo = defineUserCommand({ name: 'User Info', async execute() {} })
+  const report = defineMessageCommand({ name: 'Report', async execute() {} })
+
+  expect(buildCommandTree([ping.descriptor, userInfo.descriptor, report.descriptor])).toEqual([
+    {
+      name: 'ping',
+      description: 'Pong',
+      type: ApplicationCommandType.ChatInput,
+      options: [],
+    },
+    {
+      name: 'Report',
+      type: ApplicationCommandType.Message,
+    },
+    {
+      name: 'User Info',
+      type: ApplicationCommandType.User,
     },
   ])
 })
