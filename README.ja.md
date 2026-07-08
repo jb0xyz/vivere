@@ -4,24 +4,128 @@
 
 [![CI](https://github.com/jb0xyz/vivere/actions/workflows/ci.yml/badge.svg)](https://github.com/jb0xyz/vivere/actions/workflows/ci.yml)
 
-Vivere は、スラッシュコマンドを型付きの 1 ファイルとして書くと、[discord.js](https://discord.js.org) の上で登録、ルーティング、実行を引き受ける TypeScript 製 Discord ボットフレームワークです。
+Vivere は、コマンド、イベント、コンポーネントを型付きのファイルとして書き、それらを [discord.js](https://discord.js.org) の上で登録、ルーティング、実行する TypeScript 製 Discord ボットフレームワークです。
 
-コードでボットを作るプロジェクト向けです。コマンドの名前、説明、オプション、実行処理を同じファイルに置くと、Vivere がその定義を読み取り、型の付いた `ctx` をハンドラーに渡します。大きな switch 文や interaction 処理の繰り返しを書かずに、ボットの構造をファイルとして見通せます。
+大きな interaction の switch 文や、手作業のレジストリを持たずに済むように、ボットの機能を 1 ファイルずつ分けて置きます。Vivere はそのファイルを見つけ、決定的な manifest を作り、必要なときにスラッシュコマンドを登録し、Discord から届いた interaction を型の付いたハンドラーへ渡します。
 
-Vivere は MIT ライセンスのオープンソースプロジェクトです。リポジトリは [github.com/jb0xyz/vivere](https://github.com/jb0xyz/vivere) にあります。パッケージ名は `vivere` ですが、まだ npm には公開されていません。
+Vivere は MIT ライセンスのオープンソースプロジェクトです。リポジトリは [github.com/jb0xyz/vivere](https://github.com/jb0xyz/vivere) にあります。現在のパッケージバージョンは `0.1.0` です。まだ初期段階ですが、ファイルベースのコマンドとコンポーネントの流れは動作します。
 
 ## コード例
 
+サービスの型は、ローカルの authoring ファイルで一度だけ結び付けます。
+
 ```ts
-// src/commands/ping.ts
+// src/app/vivere.ts
+import { createVivere } from 'vivere'
+import type { Services } from './services.js'
+
+export const {
+  defineCommand,
+  defineEvent,
+  defineButton,
+  defineSelect,
+  defineModal,
+  opt,
+  param,
+  field,
+} = createVivere<Services>()
+```
+
+スラッシュコマンドは default export として書きます。
+
+```ts
+// src/commands/ping.ts -> /ping
 import { defineCommand } from '../app/vivere.js'
 
-export const pingCommand = defineCommand({
+export default defineCommand({
   name: 'ping',
   description: 'Replies with Pong',
   async execute(ctx) {
     await ctx.reply('Pong!')
   },
+})
+```
+
+オプションはハンドラーのそばで宣言します。`ctx.options` の型は宣言から推論され、文字列オプションには autocomplete を付けられます。
+
+```ts
+// src/commands/search.ts -> /search
+import { defineCommand, opt } from '../app/vivere.js'
+
+export default defineCommand({
+  name: 'search',
+  description: 'Search items',
+  options: {
+    query: opt.string('Search').autocomplete(async (ctx, value) => [
+      { name: 'Apple', value: 'apple' },
+    ]),
+  },
+  async execute(ctx) {
+    await ctx.reply(`Selected ${ctx.options.query}`)
+  },
+})
+```
+
+フォルダはスラッシュコマンドのルートになります。
+
+```txt
+src/commands/admin/index.ts  -> /admin のメタデータ
+src/commands/admin/ban.ts    -> /admin ban
+```
+
+イベントも同じ形で置けます。
+
+```ts
+// src/events/ready.ts
+import { defineEvent } from '../app/vivere.js'
+
+export default defineEvent({
+  name: 'ready',
+  once: true,
+  async execute(ctx) {
+    ctx.services.logger.info('online')
+  },
+})
+```
+
+コンポーネントは署名付きの `customId` params を持ち、クリックや送信のあとに型付きのハンドラーへ届きます。
+
+```ts
+// src/components/confirm.ts
+import { defineButton, param } from '../app/vivere.js'
+
+export default defineButton({
+  id: 'confirm',
+  params: { userId: param.snowflake() },
+  async execute(ctx) {
+    await ctx.update({ content: `ok ${ctx.params.userId}` })
+  },
+})
+```
+
+```ts
+// src/components/feedback.ts
+import { defineModal, field, param } from '../app/vivere.js'
+
+export default defineModal({
+  id: 'feedback',
+  params: { userId: param.snowflake() },
+  fields: {
+    subject: field.short('Subject'),
+    body: field.paragraph('Details'),
+  },
+  async execute(ctx) {
+    await ctx.reply({ content: `Got: ${ctx.fields.subject}` })
+  },
+})
+```
+
+コマンド、ボタン、select メニューの中から modal を開けます。
+
+```ts
+await ctx.showModal(feedbackModal, {
+  params: { userId: '123456789012345678' },
+  title: 'Feedback',
 })
 ```
 
@@ -31,65 +135,49 @@ export const pingCommand = defineCommand({
 // src/index.ts
 import { GatewayIntentBits, createApp } from 'vivere'
 import { createServices } from './app/services.js'
-import { pingCommand } from './commands/ping.js'
+import vivereConfig from '../vivere.config.js'
 
 const app = createApp({
   config: {
     token: process.env.DISCORD_TOKEN!,
     intents: [GatewayIntentBits.Guilds],
-    devGuildId: process.env.DEV_GUILD_ID,
+    devGuildId: vivereConfig.devGuildId,
   },
   createServices,
-  commands: [pingCommand],
+  discover: vivereConfig.discovery,
 })
 
 await app.start()
 ```
 
-オプションの型は宣言から推論されます。
+## 機能
 
-```ts
-import { defineCommand, opt } from '../app/vivere.js'
+- `opt.*` で宣言する、型付きのスラッシュコマンドオプション。
+- オプションごとの autocomplete resolver。
+- `commands/admin/ban.ts` -> `/admin ban` のような、フォルダベースのサブコマンドとグループ。
+- `defineEvent` で書く Discord イベント。
+- `defineButton`、`defineSelect`、`defineModal` で書くボタン、文字列 select メニュー、modal。
+- `customId` に入る署名付きコンポーネント params と、ハンドラー実行前のデコード。
+- 必要なものだけを持つハンドラー context: `ctx.options`、`ctx.params`、`ctx.fields`、`ctx.values`、`ctx.services`、`reply`、`defer`、`update`、`showModal`。
+- `createApp({ discover })` によるファイル discovery。
+- 決定的に生成される `.vivere/manifest.json`。
 
-export const inspectCommand = defineCommand({
-  name: 'inspect',
-  description: 'Shows member information',
-  options: {
-    target: opt.user('The member'),
-    silent: opt.boolean('Reply quietly').optional(),
-  },
-  async execute(ctx) {
-    ctx.options.target
-    ctx.options.silent
+## CLI
 
-    await ctx.reply({
-      content: `Selected ${ctx.options.target.username}`,
-      ephemeral: ctx.options.silent,
-    })
-  },
-})
+ワークスペースのパッケージから CLI を実行します。
+
+```sh
+vivere build
+vivere build --check
+vivere sync
+vivere sync --global
 ```
 
-このハンドラーでは、`ctx.options.target` は `User`、`ctx.options.silent` は `boolean | undefined` になります。
-
-サービスの型は一度だけ結び付けます。
-
-```ts
-// src/app/vivere.ts
-import { createVivere } from 'vivere'
-import type { ServicesType } from './services.js'
-
-export const vivere = createVivere<ServicesType>()
-
-export const defineCommand = vivere.defineCommand
-export const opt = vivere.opt
-```
-
-このファイル経由で作ったすべてのコマンドには、同じ型の `ctx.services` が渡されます。
+`vivere build` は `.vivere/manifest.json` を書き出します。`vivere build --check` は生成結果とコミット済みの manifest を比較し、差分があれば 0 以外で終了します。`vivere sync` は設定された開発用ギルドにコマンドを登録し、`vivere sync --global` はグローバルコマンドとして登録します。
 
 ## サンプルを動かす
 
-Vivere はまだ npm に公開されていません。リポジトリから実行します。
+リポジトリから basic bot を実行できます。
 
 ```sh
 git clone https://github.com/jb0xyz/vivere.git
@@ -101,11 +189,11 @@ cp .env.example .env
 pnpm start
 ```
 
-サンプルを起動する前に、`.env` に Discord ボットトークンと開発用ギルド ID を設定してください。
+起動する前に、`.env` に Discord ボットトークンと開発用ギルド ID を設定してください。
 
-## ボットの構成例
+## ボットの構成
 
-小さなボットなら、次のように置けます。
+ファイルベースのボットは、次のように置けます。
 
 ```txt
 src/
@@ -114,10 +202,23 @@ src/
     vivere.ts
   commands/
     ping.ts
+    search.ts
+    admin/
+      index.ts
+      ban.ts
+  events/
+    ready.ts
+  components/
+    confirm.ts
+    pick-role.ts
+    feedback.ts
   index.ts
+vivere.config.ts
+.vivere/
+  manifest.json
 ```
 
-コマンドは `createApp({ commands: [...] })` に渡して登録します。つながりが 1 か所に見えるので、流れを追いやすくなります。
+ファイルパスは機能の場所を示します。ファイル内の定義は、Vivere が登録とルーティングに使う型付きの契約になります。
 
 ## コントリビュート
 
